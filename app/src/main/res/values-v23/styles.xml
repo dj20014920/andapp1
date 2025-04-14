@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/values-v23/styles.xml -->
+<resources>
+    <style name="Theme.Chat.Default" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:statusBarColor">?attr/colorPrimaryDark</item>
+        <item name="android:windowLightStatusBar">true</item> <!-- ✅ API 23 이상 전용 -->
+    </style>
+</resources>

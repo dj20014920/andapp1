@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" >
+
+    <style name="Theme.Chat.Default" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:statusBarColor">?attr/colorPrimaryDark</item>
+    </style>
+    <style name="Theme.Chat.NoActionBar.Transparent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:fitsSystemWindows">true</item>
+    </style>
+    <!-- ChatKit 메시지 리스트 스타일 -->
+    <style name="ChatKitMessagesListStyle">
+        <item name="chat_bubbleStyle">rounded</item>
+        <item name="chat_textColor">#000000</item>
+        <item name="chat_textSize">16sp</item>
+
+        <item name="incomingTextColor">#000000</item>
+        <item name="outcomingTextColor">#FFFFFF</item>
+        <item name="incomingBubbleDrawable">@drawable/chatkit_incoming_bubble</item>
+        <item name="outcomingBubbleDrawable">@drawable/chatkit_outcoming_bubble</item>
+    </style>
+
+    <!-- 기본 메시지 리스트 배경 -->
+    <style name="DefaultMessagesListStyle">
+        <item name="android:background">#FFFFFF</item>
+    </style>
+
+    <!-- 채팅 테마 -->
+    <style name="ChatTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="windowActionModeOverlay">true</item>
+    </style>
+
+    <!-- 앱 전체 테마 -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <!-- 메시지 정보 텍스트 -->
+    <style name="ChatMessageInfo">
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <!-- 채팅 헤더 타이틀 -->
+    <style name="ChatHeaderTitle">
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- 타이핑 중 표시 -->
+    <style name="ChatWhoIsTyping">
+        <item name="android:lines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <!-- 전송 버튼 -->
+    <style name="ChatSendButton">
+        <item name="android:maxLines">5</item>
+    </style>
+
+    <!-- 입력창 텍스트 -->
+    <style name="ChatInputEditText">
+        <item name="android:background">@null</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <!-- 아웃고잉 메시지 레이아웃 -->
+    <style name="ChatMessageLayoutOutcoming">
+        <item name="android:paddingLeft">8dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:gravity">end|right</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
+    </style>
+
+    <!-- 인커밍 메시지 레이아웃 -->
+    <style name="ChatMessageLayoutIncoming">
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingRight">8dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:gravity">end|right</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
+    </style>
+
+    <!-- 채팅 헤더 레이아웃 -->
+    <style name="ChatHeaderLayout">
+        <item name="android:padding">8dp</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+</resources>

@@ -1,0 +1,3 @@
+include(":app", ":chatkit")
+
+project(":chatkit").projectDir = File(rootDir, "ChatKit-master/chatkit")

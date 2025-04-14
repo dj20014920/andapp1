@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 채팅방 관리 -->
+    <item
+        android:id="@+id/menu_change_name"
+        android:title="채팅방 이름 변경"
+        android:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_participants"
+        android:title="참여자 목록"
+        android:showAsAction="never" />
+
+    <!-- 나가기 -->
+    <item
+        android:id="@+id/menu_leave_room"
+        android:title="채팅방 나가기"
+        android:showAsAction="never" />
+
+</menu>

@@ -1,0 +1,18 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ✅ Base Theme - 필요 없으면 삭제해도 됨 -->
+    <style name="Base.Theme.AndApp1" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your theme -->
+    </style>
+
+    <!-- ✅ 앱 전체에서 사용하는 메인 테마 -->
+    <style name="Theme.AndApp1" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- 상단바 배경을 흰색 -->
+        <item name="colorPrimary">@android:color/white</item>
+        <item name="colorPrimaryVariant">@android:color/white</item>
+        <item name="colorOnPrimary">@android:color/black</item> <!-- 텍스트 색 -->
+        <!-- 상태바 아이콘 검은색 (API 23 이상) -->
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+</resources>

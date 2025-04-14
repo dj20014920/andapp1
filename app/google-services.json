@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "975251727197",
+    "firebase_url": "https://andapp1-bcb40-default-rtdb.firebaseio.com",
+    "project_id": "andapp1-bcb40",
+    "storage_bucket": "andapp1-bcb40.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975251727197:android:8ef09566f516a9a8c37eb4",
+        "android_client_info": {
+          "package_name": "com.example.andapp1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAL3Kxl8CrzHCy1xJvr5y-i7SUAQf4hxL0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

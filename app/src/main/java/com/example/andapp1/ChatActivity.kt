@@ -40,7 +40,7 @@ class ChatActivity : AppCompatActivity() {
         val roomCode = intent.getStringExtra("roomCode") ?: "default_room"
         val roomName = intent.getStringExtra("roomName") ?: "채팅방"
         setSupportActionBar(binding.toolbar) // -> activity_chat.xml에 Toolbar가 있어야 함
-
+//dd
         supportActionBar?.title = roomName
 
         setSupportActionBar(binding.toolbar)

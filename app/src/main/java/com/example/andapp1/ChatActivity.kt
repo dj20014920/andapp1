@@ -1,4 +1,4 @@
-//ChatActivity.ktt
+//ChatActivity.kttt
 package com.example.andapp1
 
 import android.content.Intent

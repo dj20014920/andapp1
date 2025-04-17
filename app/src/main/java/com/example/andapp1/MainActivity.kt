@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         fun getHashKey(context: Context) {
+
             try {
                 val info = context.packageManager.getPackageInfo(
                     context.packageName,

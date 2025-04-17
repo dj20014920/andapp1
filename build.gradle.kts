@@ -15,7 +15,7 @@ buildscript {
         maven { url = uri("https://devrepo.kakao.com/nexus/content/groups/public/") }
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.4.0") // ✅ 최신 AGP 8.4.0으로 업그레이드
+        classpath("com.android.tools.build:gradle:8.9.0") // ✅ 최신 AGP 8.4.0으로 업그레이드
     }
 }
 

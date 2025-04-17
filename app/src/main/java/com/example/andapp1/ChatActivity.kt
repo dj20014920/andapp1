@@ -40,7 +40,7 @@ class ChatActivity : AppCompatActivity() {
         val roomCode = intent.getStringExtra("roomCode") ?: "default_room"
         val roomName = intent.getStringExtra("roomName") ?: "채팅방"
         setSupportActionBar(binding.toolbar) // -> activity_chat.xml에 Toolbar가 있어야 함
-//dd
+
         supportActionBar?.title = roomName
 
         setSupportActionBar(binding.toolbar)
@@ -73,37 +73,50 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun showMapRestoreButton() {
+        val rootView = findViewById<ViewGroup>(android.R.id.content)
+
+        // ✅ 중복 방지: 이미 있는 경우 추가 X
+        val existing = rootView.findViewWithTag<FloatingActionButton>("map_restore_button")
+        if (existing != null) {
+            Log.d("ChatActivity", "🧭 이미 플로팅 버튼 존재 - 중복 생성 방지")
+            return
+        }
+
         val fab = FloatingActionButton(this).apply {
+            tag = "map_restore_button" // ✅ 중복 방지용 태그
+
             setImageResource(R.drawable.ic_map)
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                gravity = Gravity.TOP or Gravity.END // ✅ 오른쪽 위로 변경
+                gravity = Gravity.TOP or Gravity.END
                 marginEnd = 32
                 topMargin = 100
             }
 
+            val dragKey = R.id.view_tag_drag_info
+
             setOnTouchListener { view, event ->
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        view.tag = Triple(event.rawX, event.rawY, false)
+                        view.setTag(dragKey, Triple(event.rawX, event.rawY, false))
                         true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        val (startX, startY, _) = view.tag as Triple<Float, Float, Boolean>
+                        val (startX, startY, _) = view.getTag(dragKey) as Triple<Float, Float, Boolean>
                         val dx = event.rawX - startX
                         val dy = event.rawY - startY
                         val isDragged = dx * dx + dy * dy > 100
                         if (isDragged) {
                             view.x += dx
                             view.y += dy
-                            view.tag = Triple(event.rawX, event.rawY, true)
+                            view.setTag(dragKey, Triple(event.rawX, event.rawY, true))
                         }
                         true
                     }
                     MotionEvent.ACTION_UP -> {
-                        val (_, _, isDragged) = view.tag as Triple<Float, Float, Boolean>
+                        val (_, _, isDragged) = view.getTag(dragKey) as Triple<Float, Float, Boolean>
                         if (!isDragged) {
                             lastMapUrl?.let { url ->
                                 val intent = Intent(this@ChatActivity, MapActivity::class.java)
@@ -118,7 +131,6 @@ class ChatActivity : AppCompatActivity() {
             }
         }
 
-        val rootView = findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(fab)
     }
 

@@ -1,6 +1,7 @@
 package com.example.andapp1 // ✅ 완료
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -22,6 +23,10 @@ import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.security.MessageDigest
+import android.content.Context
+import android.util.Base64
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,6 +39,25 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
+        fun getHashKey(context: Context) {
+
+            try {
+                val info = context.packageManager.getPackageInfo(
+                    context.packageName,
+                    PackageManager.GET_SIGNATURES
+                )
+                info.signatures?.forEach { signature ->
+                    val md = MessageDigest.getInstance("SHA")
+                    md.update(signature.toByteArray())
+                    val hashKey = Base64.encodeToString(md.digest(), Base64.NO_WRAP)
+                    Log.d("HashKey", "keyhash: $hashKey")
+                }
+            } catch (e: Exception) {
+                Log.e("HashKey", "Error: ${e.message}")
+            }
+        }
+
+        getHashKey(this)
 
         val prefs = getSharedPreferences("login", MODE_PRIVATE)
         val editor = prefs.edit()

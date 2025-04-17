@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -86,6 +87,8 @@ class ChatActivity : AppCompatActivity() {
             tag = "map_restore_button" // ✅ 중복 방지용 태그
 
             setImageResource(R.drawable.ic_map)
+            setBackgroundTintList(ContextCompat.getColorStateList(context, android.R.color.white)) // 배경 흰색
+            setColorFilter(ContextCompat.getColor(context, android.R.color.black)) // 아이콘 검정
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT

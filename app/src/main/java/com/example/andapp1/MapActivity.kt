@@ -117,10 +117,15 @@ class MapActivity : AppCompatActivity() {
         val fabShare = menu.findViewById<FloatingActionButton>(R.id.fab_share)
         val fabScrap = menu.findViewById<FloatingActionButton>(R.id.fab_scrap)
         val fabBack = menu.findViewById<FloatingActionButton>(R.id.fab_back)
+        val fabScrapList = menu.findViewById<FloatingActionButton>(R.id.fab_scrap_list) // 추가
 
         fabShare.setOnClickListener { shareCurrentMapToChat() }
         fabScrap.setOnClickListener { promptScrapNameAndSave() }
         fabBack.setOnClickListener { returnToChat() }
+        fabScrapList.setOnClickListener {
+            val roomCode = intent.getStringExtra("roomCode") ?: return@setOnClickListener
+            ScrapDialogHelper.showScrapListDialog(this, roomCode)
+        }
 
         // 초기 상태를 살짝 위에 & 투명하게
         val fabList = listOf(fabShare, fabScrap, fabBack)
@@ -174,6 +179,7 @@ class MapActivity : AppCompatActivity() {
         val fabList = listOf(
             menu.findViewById<FloatingActionButton>(R.id.fab_share),
             menu.findViewById<FloatingActionButton>(R.id.fab_scrap),
+            menu.findViewById<FloatingActionButton>(R.id.fab_scrap_list),
             menu.findViewById<FloatingActionButton>(R.id.fab_back)
         )
 

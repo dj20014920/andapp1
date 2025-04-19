@@ -56,4 +56,20 @@
         android:outlineProvider="none"
         android:clipToOutline="false"
         app:useCompatPadding="false" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_scrap_list"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:src="@android:drawable/ic_menu_agenda"
+        android:contentDescription="스크랩 목록"
+        app:backgroundTint="@android:color/white"
+        android:tint="@android:color/black"
+        android:elevation="0dp"
+        android:stateListAnimator="@null"
+        android:translationZ="0dp"
+        android:outlineProvider="none"
+        android:clipToOutline="false"
+        app:useCompatPadding="false" />
 </LinearLayout>

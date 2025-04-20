@@ -1,3 +1,4 @@
+<!--item_outcoming_text_message.xml-->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -15,6 +16,9 @@
         android:layout_alignParentRight="true"
         android:layout_marginLeft="@dimen/message_outcoming_bubble_margin_left"
         android:layout_marginStart="@dimen/message_outcoming_bubble_margin_left"
+        android:descendantFocusability="blocksDescendants"
+        android:background="@drawable/chatkit_outcoming_bubble"
+        android:padding="12dp"
         app:alignContent="stretch"
         app:alignItems="stretch"
         app:flexWrap="wrap"
@@ -24,7 +28,12 @@
             android:id="@id/messageText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignWithParentIfMissing="true" />
+            android:autoLink="web"
+            android:linksClickable="true"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:textColor="@android:color/white"
+        android:textSize="16sp" />
 
         <TextView
             android:id="@id/messageTime"

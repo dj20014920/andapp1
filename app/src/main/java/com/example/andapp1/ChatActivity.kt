@@ -1,36 +1,26 @@
-//ChatActivity.kttt
 package com.example.andapp1
 
 import android.content.Intent
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.os.*
 import android.util.Log
-import android.view.Gravity
-import android.view.Menu
-import android.view.MenuItem
-import android.view.MotionEvent
-import android.view.ViewGroup
+import android.view.*
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.*
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.andapp1.databinding.ActivityChatBinding
-import com.example.andapp1.ChatMessage
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.database.FirebaseDatabase
-import kotlinx.coroutines.Dispatchers
+import com.stfalcon.chatkit.messages.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class ChatActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityChatBinding
     private lateinit var viewModel: ChatViewModel
-    private lateinit var adapter: ChatMessageAdapter
     private lateinit var layoutManager: LinearLayoutManager
+    private lateinit var adapter: MessagesListAdapter<ChatMessage>
     private var lastMapUrl: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,55 +30,92 @@ class ChatActivity : AppCompatActivity() {
 
         val roomCode = intent.getStringExtra("roomCode") ?: "default_room"
         val roomName = intent.getStringExtra("roomName") ?: "채팅방"
-        setSupportActionBar(binding.toolbar) // -> activity_chat.xml에 Toolbar가 있어야 함
-
+        setSupportActionBar(binding.toolbar)
         supportActionBar?.title = roomName
 
-        setSupportActionBar(binding.toolbar)
+        viewModel = ViewModelProvider(this, ChatViewModelFactory(roomCode, applicationContext))[ChatViewModel::class.java]
 
-        // ✅ ViewModel은 한 번만 생성
-        val factory = ChatViewModelFactory(roomCode, applicationContext)
-        viewModel = ViewModelProvider(this, factory)[ChatViewModel::class.java]
+        layoutManager = LinearLayoutManager(this).apply {
+            stackFromEnd = true
+        }
+        binding.messagesList.layoutManager = layoutManager
 
-        // ✅ 코루틴에서 userId 가져오기
+        // 어댑터 초기화 및 UI 연결
+        initializeAdapterAndListeners()
+    }
+
+    private fun initializeAdapterAndListeners() {
         lifecycleScope.launch {
             val user = RoomDatabaseInstance.getInstance(applicationContext).userDao().getUser()
-            if (user != null) {
-                val userId = user.id
-                addParticipantToRoom(roomCode, userId)
+            val senderId = user?.id ?: "unknown"
+
+            val holders = MessageHolders()
+                .setIncomingTextConfig(TextMessageViewHolder::class.java, R.layout.item_incoming_text_message)
+                .setOutcomingTextConfig(TextMessageViewHolder::class.java, R.layout.item_outcoming_text_message)
+
+            adapter = MessagesListAdapter(senderId, holders, null)
+            binding.messagesList.setAdapter(adapter)
+
+            // 메시지 전송 처리
+            binding.customMessageInput.setInputListener { input ->
+                val text = input.toString()
+                viewModel.sendMessage(text)
+
+                Handler(Looper.getMainLooper()).postDelayed({
+                    scrollToBottomSmooth()
+                }, 300)
+
+                true
+            }
+
+            observeMessages()
+        }
+    }
+
+    private fun observeMessages() {
+        viewModel.messages.observe(this) { messages ->
+            adapter.clear()
+            adapter.addToEnd(messages.sortedBy { it.createdAt.time }, true)
+
+            // 안전하게 스크롤
+            binding.messagesList.post {
+                val lastIndex = adapter.itemCount
+                binding.messagesList.scrollToPosition(lastIndex)
+
+                Handler(Looper.getMainLooper()).postDelayed({
+                    binding.messagesList.scrollToPosition(lastIndex)
+                    Log.d("스크롤 디버그", "✅ 재확인 스크롤: $lastIndex")
+                }, 150)
             }
         }
+    }
 
-        setupRecyclerView()
-        observeMessages()
+    private fun scrollToBottomSmooth() {
+        binding.messagesList.postDelayed({
+            if (adapter.itemCount > 0) {
+                binding.messagesList.scrollToPosition(adapter.itemCount)
+                Log.d("스크롤 디버그", "Adapter size = ${adapter.itemCount}")
+            }
+        }, 300)
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        Log.d("ChatActivity", "🌐 onNewIntent 호출됨") // 추가
         intent?.getStringExtra("mapUrl")?.let { url ->
-            Log.d("ChatActivity", "🌐 받은 지도 URL: $url") // 추가
-            lastMapUrl = url
+            viewModel.sendMapUrlMessage(url)
             showMapRestoreButton()
         }
     }
 
     private fun showMapRestoreButton() {
         val rootView = findViewById<ViewGroup>(android.R.id.content)
-
-        // ✅ 중복 방지: 이미 있는 경우 추가 X
-        val existing = rootView.findViewWithTag<FloatingActionButton>("map_restore_button")
-        if (existing != null) {
-            Log.d("ChatActivity", "🧭 이미 플로팅 버튼 존재 - 중복 생성 방지")
-            return
-        }
+        if (rootView.findViewWithTag<FloatingActionButton>("map_restore_button") != null) return
 
         val fab = FloatingActionButton(this).apply {
-            tag = "map_restore_button" // ✅ 중복 방지용 태그
-
+            tag = "map_restore_button"
             setImageResource(R.drawable.ic_map)
-            setBackgroundTintList(ContextCompat.getColorStateList(context, android.R.color.white)) // 배경 흰색
-            setColorFilter(ContextCompat.getColor(context, android.R.color.black)) // 아이콘 검정
+            setBackgroundTintList(ContextCompat.getColorStateList(context, android.R.color.white))
+            setColorFilter(ContextCompat.getColor(context, android.R.color.black))
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -98,105 +125,17 @@ class ChatActivity : AppCompatActivity() {
                 topMargin = 100
             }
 
-            val dragKey = R.id.view_tag_drag_info
-
-            setOnTouchListener { view, event ->
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        view.setTag(dragKey, Triple(event.rawX, event.rawY, false))
-                        true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        val (startX, startY, _) = view.getTag(dragKey) as Triple<Float, Float, Boolean>
-                        val dx = event.rawX - startX
-                        val dy = event.rawY - startY
-                        val isDragged = dx * dx + dy * dy > 100
-                        if (isDragged) {
-                            view.x += dx
-                            view.y += dy
-                            view.setTag(dragKey, Triple(event.rawX, event.rawY, true))
-                        }
-                        true
-                    }
-                    MotionEvent.ACTION_UP -> {
-                        val (_, _, isDragged) = view.getTag(dragKey) as Triple<Float, Float, Boolean>
-                        if (!isDragged) {
-                            lastMapUrl?.let { url ->
-                                val intent = Intent(this@ChatActivity, MapActivity::class.java)
-                                intent.putExtra("mapUrl", url)
-                                startActivity(intent)
-                            }
-                        }
-                        true
-                    }
-                    else -> false
+            setOnClickListener {
+                val intent = Intent(this@ChatActivity, MapActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
                 }
+                startActivity(intent)
             }
         }
 
         rootView.addView(fab)
     }
 
-    private fun setupRecyclerView() {
-        val senderId = "user1"
-        adapter = ChatMessageAdapter(senderId)
-        layoutManager = LinearLayoutManager(this).apply {
-            stackFromEnd = true // ✅ 최신 채팅이 아래 정렬되게 함
-        }
-
-        // ✅ MessagesList는 내부적으로 RecyclerView이므로 명확히 설정
-        binding.messagesList.setLayoutManager(layoutManager)
-        binding.messagesList.setAdapter(adapter)
-
-        binding.customMessageInput.setInputListener { input ->
-            val text = input.toString()
-            viewModel.sendMessage(text)
-
-            Handler(Looper.getMainLooper()).postDelayed({
-                scrollToBottomSmooth()
-            }, 150)
-
-            true
-        }
-    }
-
-    fun addParticipantToRoom(roomCode: String, userId: String) {
-        val participantsRef = FirebaseDatabase.getInstance()
-            .getReference("rooms")
-            .child(roomCode)
-            .child("participants")
-
-        participantsRef.child(userId).setValue(true)
-    }
-
-    private fun observeMessages() {
-        viewModel.messages.observe(this) { messages ->
-            Log.d("ChatActivity", "📨 메시지 수: ${messages.size}")
-            val sorted = messages.sortedBy { it.createdAt.time }
-
-            adapter.clear()
-            adapter.addToEnd(sorted, true)
-
-            // RecyclerView가 렌더링 완료된 후 스크롤
-            // observeMessages 내부에서 변경
-            binding.messagesList.postDelayed({
-                val lastIndex = adapter.itemCount
-                if (lastIndex >= 0) {
-                    binding.messagesList.scrollToPosition(lastIndex+1)
-                }
-            }, 300)
-        }
-    }
-
-    private fun scrollToBottomSmooth() {
-        binding.messagesList.postDelayed({
-            if (adapter.itemCount > 0) {
-                val lastIndex = adapter.itemCount
-                binding.messagesList.scrollToPosition(lastIndex+1)
-            }
-        }, 300) // ✅ 시간 여유 줘서 확실히 반영되게
-    }
-    //메뉴버튼
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_chat, menu)
         return true
@@ -205,26 +144,28 @@ class ChatActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.menu_open_map -> {
-                // ✅ 지도 액티비티로 이동
-                val intent = Intent(this, MapActivity::class.java)
-                intent.putExtra("roomCode", viewModel.roomCode) // 채팅방 코드 넘기기 (필요 시)
-                startActivity(intent)
-                return true
+                startActivity(Intent(this, MapActivity::class.java).apply {
+                    putExtra("roomCode", viewModel.roomCode)
+                })
+                true
             }
-
             R.id.menu_scrap_list -> {
-                // ✅ 스크랩 목록 다이얼로그 띄우기 (또는 액티비티 이동)
                 ScrapDialogHelper.showScrapListDialog(this, viewModel.roomCode)
-                return true
+                true
             }
-
             R.id.menu_participants -> {
-                // ✅ 참여자 목록 다이얼로그 띄우기
                 DialogHelper.showParticipantsDialog(this, viewModel.roomCode)
-                return true
+                true
             }
-
-            else -> return super.onOptionsItemSelected(item)
+            else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun addParticipantToRoom(roomCode: String, userId: String) {
+        val ref = FirebaseDatabase.getInstance()
+            .getReference("rooms")
+            .child(roomCode)
+            .child("participants")
+        ref.child(userId).setValue(true)
     }
 }

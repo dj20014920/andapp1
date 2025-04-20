@@ -61,7 +61,8 @@ dependencies {
     implementation("com.kakao.sdk:v2-share:2.21.1") // 카카오톡 공유
     implementation("com.kakao.sdk:v2-user:2.21.1") // 최신 버전 확인
     // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.12.0"))
+    implementation ("com.google.firebase:firebase-storage-ktx")// ✅ Storage 용
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-database:21.0.0")
     implementation("com.google.firebase:firebase-analytics:22.4.0")

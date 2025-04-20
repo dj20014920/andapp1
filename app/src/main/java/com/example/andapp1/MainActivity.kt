@@ -118,9 +118,10 @@ class MainActivity : AppCompatActivity() {
 
                 FirebaseRoomManager.ensureRoomExists(room) {
                     val intent = Intent(this, ChatActivity::class.java)
-                    intent.putExtra("roomName", room.roomTitle)
                     intent.putExtra("roomCode", room.roomCode)
-                    startActivity(intent)
+                    intent.putExtra("roomName", room.roomTitle)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    this.startActivity(intent)
                 }
             },
             onMenuChangeNameClick = { room ->

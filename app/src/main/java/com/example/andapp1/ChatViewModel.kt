@@ -53,6 +53,7 @@ class ChatViewModel(val roomCode: String,
             }
         }
     }
+
     fun sendSystemMessage(text: String) {
         viewModelScope.launch {
             val message = ChatMessage(
@@ -70,8 +71,38 @@ class ChatViewModel(val roomCode: String,
         }
     }
 
+    fun sendMapUrlMessage(mapUrl: String) {
+        viewModelScope.launch {
+            val currentUser = withContext(Dispatchers.IO) {
+                userDao.getUser()
+            }
+
+            if (currentUser != null) {
+                val user = Author(
+                    id = currentUser.id,
+                    name = currentUser.nickname ?: "알 수 없음",
+                    avatar = null
+                )
+
+                val message = ChatMessage(
+                    id = System.currentTimeMillis().toString(),
+                    text = "🗺️ 장소를 공유했어요!\n$mapUrl", // ✅ URL도 텍스트에 포함
+                    user = user,
+                    imageUrl = null,
+                    mapUrl = mapUrl,
+                    createdAt = Date()
+                )
+                Log.d("ChatViewModel", "📤 지도 URL 전송: $mapUrl")
+                messageRepository.sendMessage(message)
+            } else {
+                Log.e("ChatViewModel", "❌ 사용자 정보 없음")
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         messageRepository.cleanup()
     }
+
 }

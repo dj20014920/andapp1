@@ -19,12 +19,7 @@
         android:layout_marginRight="16dp"
         android:hint="코드 또는 링크 입력"
         android:minHeight="48dp" />
-    <Button
-        android:id="@+id/kakao_login_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="카카오로 로그인"
-        android:layout_centerInParent="true"/>
+
     <!-- 입장하기 버튼 -->
     <Button
         android:id="@+id/enterButton"

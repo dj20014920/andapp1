@@ -3,6 +3,7 @@ package com.example.andapp1
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.*
 import android.webkit.ConsoleMessage
@@ -17,6 +18,7 @@ import com.example.andapp1.databinding.ActivityMapBinding
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.database.FirebaseDatabase
 import kotlin.jvm.java
+import android.widget.Button
 
 class MapActivity : AppCompatActivity() {
 
@@ -185,7 +187,6 @@ class MapActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    // MapActivity.kt
     private fun shareCurrentMapToChat() {
         val url = binding.webView.url ?: return
         val intent = Intent(this, ChatActivity::class.java).apply {
@@ -196,31 +197,56 @@ class MapActivity : AppCompatActivity() {
     }
 
     private fun promptScrapNameAndSave() {
-        val editText = EditText(this)
-        editText.hint = "장소 이름 입력"
         val roomCode = intent.getStringExtra("roomCode") ?: return
+        val dialogView = layoutInflater.inflate(R.layout.dialog_scrap_input, null)
+        val editText = dialogView.findViewById<EditText>(R.id.editScrapName)
+        val saveButton = dialogView.findViewById<Button>(R.id.btnSaveScrap)
 
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle("스크랩 이름")
-            .setView(editText)
-            .setPositiveButton("저장") { _, _ ->
-                val name = editText.text.toString().trim()
-                val url = binding.webView.url ?: return@setPositiveButton
-                val scrap = ScrapItem(name, url)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
 
-                FirebaseDatabase.getInstance()
-                    .getReference("scraps")
-                    .child(roomCode)
-                    .push()
-                    .setValue(scrap)
-                    .addOnSuccessListener {
-                        Toast.makeText(this, "✅ 스크랩 저장됨", Toast.LENGTH_SHORT).show()
-                    }
-                    .addOnFailureListener {
-                        Toast.makeText(this, "❌ 저장 실패", Toast.LENGTH_SHORT).show()
-                    }
+        saveButton.setOnClickListener {
+            val name = editText.text.toString().trim()
+            if (name.isEmpty()) {
+                Toast.makeText(this, "⚠️ 장소 이름을 입력해주세요", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
-            .setNegativeButton("취소", null)
-            .show()
+
+            val url = binding.webView.url ?: return@setOnClickListener
+            val scrap = ScrapItem(
+                name = name,
+                url = url,
+                thumbnailUrl = "https://example.com/default-thumbnail.png",
+                description = ""
+            )
+
+            FirebaseDatabase.getInstance()
+                .getReference("scraps")
+                .child(roomCode)
+                .push()
+                .setValue(scrap)
+                .addOnSuccessListener {
+                    Toast.makeText(this, "✅ 스크랩 저장됨", Toast.LENGTH_SHORT).show()
+
+                    // 자동 메시지 전송
+                    val messageIntent = Intent(this, ChatActivity::class.java).apply {
+                        putExtra("roomCode", roomCode)
+                        putExtra("mapUrl", url)
+                        putExtra("scrapText", "📌 ${name}을(를) 스크랩했어요!\n$url")
+                        addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    }
+                    startActivity(messageIntent)
+                }
+                .addOnFailureListener {
+                    Toast.makeText(this, "❌ 저장 실패", Toast.LENGTH_SHORT).show()
+                }
+
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 }

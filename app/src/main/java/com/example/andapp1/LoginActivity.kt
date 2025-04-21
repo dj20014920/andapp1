@@ -71,7 +71,7 @@ class LoginActivity : AppCompatActivity() {
                 val profileImageUrl = user.kakaoAccount?.profile?.profileImageUrl
                 saveUserToFirebaseAndRoom(userId, nickname, email, profileImageUrl)
 
-                // ✅ 자동 로그인용 사용자 ID를 저장
+                // 자동 로그인용 사용자 ID를 저장
                 val prefs = getSharedPreferences("login", MODE_PRIVATE)
                 prefs.edit().putString("userId", userId).apply()
 

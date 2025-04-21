@@ -39,7 +39,6 @@ class ChatActivity : AppCompatActivity() {
             stackFromEnd = true
         }
         binding.messagesList.layoutManager = layoutManager
-
         // 어댑터 초기화 및 UI 연결
         initializeAdapterAndListeners()
     }
@@ -101,9 +100,14 @@ class ChatActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
+
         intent?.getStringExtra("mapUrl")?.let { url ->
             viewModel.sendMapUrlMessage(url)
             showMapRestoreButton()
+        }
+
+        intent?.getStringExtra("scrapText")?.let { scrapText ->
+            viewModel.sendMessage(scrapText)
         }
     }
 

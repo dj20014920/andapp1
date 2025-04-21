@@ -27,7 +27,7 @@ import java.security.MessageDigest
 import android.content.Context
 import android.util.Base64
 
-
+//todo 다른 사용자가 방을 생성하면 내 채팅창 목록에도 바로 뜨는 거 수정하기 입장하기를 안눌러도 바로뜸
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -74,7 +74,6 @@ class MainActivity : AppCompatActivity() {
         if (userId != null) {
             checkAndSaveUserInfo(userId, nickname, email)
         }
-        // prefs.edit().clear().apply() // ✅ 로그인 정보 초기화
         Log.d("AutoLogin", "SharedPreferences에서 불러온 userId = $userId")
         if (userId == null) {
             startActivity(Intent(this, LoginActivity::class.java))
@@ -89,7 +88,6 @@ class MainActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
         KakaoSdk.init(this, getString(R.string.kakao_native_app_key))
         //카카오 로그인
-        // val loginButton = findViewById<Button>(R.id.kakao_login_button)
         val userDao = db.userDao()
 
         lifecycleScope.launch {
@@ -100,7 +98,6 @@ class MainActivity : AppCompatActivity() {
             savedUser?.let { user ->
                 Log.d("AutoLogin", "자동 로그인 성공: ${user.nickname}")
                 // 자동 로그인 처리: 채팅방 화면 진입 등
-                // startActivity(Intent(this@MainActivity, ChatListActivity::class.java)) 또는 처리 로직
             }
         }
 
@@ -128,11 +125,7 @@ class MainActivity : AppCompatActivity() {
                 DialogHelper.showChangeNameDialog(this, room) { newName ->
                     val oldName = room.roomTitle
                     viewModel.changeRoomName(room.roomCode, newName)
-
-                    // 시스템 메시지 전송
                     val systemMessage = "⚙️ 채팅방 이름이 '$oldName'에서 '$newName'으로 변경되었습니다."
-                    // ChatViewModel 인스턴스가 필요한데 현재 MainActivity에는 없으므로
-                    // ChatActivity에서 이 메시지를 보내야 해
                 }
             },
             onMenuParticipantsClick = { room ->
@@ -140,7 +133,7 @@ class MainActivity : AppCompatActivity() {
             },
             onMenuLeaveRoomClick = { room ->
                 DialogHelper.showLeaveRoomDialog(this) {
-                    viewModel.leaveRoom(room.roomCode)  // ✅ 새로운 함수로 변경 (deleteRoom ❌)
+                    viewModel.leaveRoom(room.roomCode)
                 } },
             onFavoriteToggle = { room, isFavorite ->
                 // Room 객체 상태 변경
@@ -189,15 +182,14 @@ class MainActivity : AppCompatActivity() {
 
         userRef.get().addOnSuccessListener { snapshot ->
             if (!snapshot.exists()) {
-                // 아직 저장된 적이 없으면 저장
                 val user = User(userId, nickname, email)
                 userRef.setValue(user)
-                Log.d("AutoLogin", "✅ Firebase에 사용자 정보 저장 완료")
+                Log.d("AutoLogin", "사용자 정보 저장 완료")
             } else {
-                Log.d("AutoLogin", "ℹ️ 사용자 정보가 이미 Firebase에 존재함")
+                Log.d("AutoLogin", "사용자 정보가 이미 존재함")
             }
         }.addOnFailureListener {
-            Log.e("AutoLogin", "❌ 사용자 정보 조회 실패", it)
+            Log.e("AutoLogin", "사용자 정보 조회 실패", it)
         }
     }
     private fun setupButtonClickListeners() {

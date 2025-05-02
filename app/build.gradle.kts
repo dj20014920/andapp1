@@ -91,4 +91,5 @@ dependencies {
 
     // 내부 프로젝트
     implementation(project(":chatkit"))
+    implementation("com.rmtheis:tess-two:9.1.0")
 }

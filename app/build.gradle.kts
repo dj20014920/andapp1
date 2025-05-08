@@ -66,7 +66,7 @@ dependencies {
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-database:21.0.0")
     implementation("com.google.firebase:firebase-analytics:22.4.0")
-
+    implementation("com.google.firebase:firebase-messaging:24.1.1")
     // UI + 라이브러리
 
     implementation ("androidx.annotation:annotation:1.9.1") // 또는 최신 버전

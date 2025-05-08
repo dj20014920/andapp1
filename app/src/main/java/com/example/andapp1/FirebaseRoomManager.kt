@@ -44,7 +44,7 @@ object FirebaseRoomManager {
     }
 
     // ✅ 채팅방 생성
-    fun createRoom(room: Room) {
+    fun createRoom(room: Room, creatorId: String) {
         val roomRef = roomsRef.child(room.roomCode)
 
         Log.d("FirebaseRoomManager", "✅ createRoom 호출됨: ${room.roomCode}")
@@ -52,9 +52,10 @@ object FirebaseRoomManager {
         roomRef.setValue(room)
             .addOnSuccessListener {
                 Log.d("FirebaseRoomManager", "✅ Firebase에 방 생성 성공: ${room.roomCode}")
+                addParticipant(room.roomCode, creatorId) // ✅ 본인을 참여자로 추가
             }
-            .addOnFailureListener { e ->
-                Log.e("FirebaseRoomManager", "❌ Firebase에 방 생성 실패: ${e.message}", e)
+            .addOnFailureListener {
+                Log.e("FirebaseRoomManager", "❌ Firebase에 방 생성 실패", it)
             }
     }
 
@@ -177,7 +178,18 @@ object FirebaseRoomManager {
 
     // ✅ 참여자 제거 (선택 사항)
     fun removeParticipant(roomCode: String, userId: String) {
-        roomsRef.child(roomCode).child("participants").child(userId).removeValue()
+        val participantsRef = roomsRef.child(roomCode).child("participants")
+
+        participantsRef.child(userId).removeValue().addOnSuccessListener {
+            // 삭제 후 남은 인원 확인
+            participantsRef.get().addOnSuccessListener { snapshot ->
+                if (!snapshot.hasChildren()) {
+                    // 아무도 없으면 방 삭제
+                    deleteRoom(roomCode)
+                    Log.d("FirebaseRoomManager", "🚨 모든 참여자가 나갔으므로 방 삭제됨: $roomCode")
+                }
+            }
+        }
     }
 
     fun sendLeaveMessage(roomCode: String, author: Author) {

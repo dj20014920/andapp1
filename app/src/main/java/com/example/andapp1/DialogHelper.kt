@@ -1,6 +1,7 @@
 package com.example.andapp1 // ✅ 완료
 
 import android.content.Context
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
@@ -102,7 +103,23 @@ object DialogHelper {
                     loadedCount++
 
                     if (loadedCount == userIds.size) {
-                        showSimpleDialog(context, "참여자 목록", participantNames.joinToString("\n"))
+                        AlertDialog.Builder(context)
+                            .setTitle("참여자 목록")
+                            .setMessage(participantNames.joinToString("\n"))
+                            .setPositiveButton("초대하기") { _, _ ->
+                                val shareText = """
+                                초대 코드 : $roomCode
+                                초대 링크 : https://example.com/room?code=$roomCode
+                            """.trimIndent()
+
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "공유하기"))
+                            }
+                            .setNegativeButton("닫기", null)
+                            .show()
                     }
                 }
             }
@@ -110,6 +127,7 @@ object DialogHelper {
             showSimpleDialog(context, "오류", "참여자 목록을 불러오지 못했습니다.")
         }
     }
+
     fun showSimpleDialog(context: Context, title: String, message: String) {
         AlertDialog.Builder(context)
             .setTitle(title)

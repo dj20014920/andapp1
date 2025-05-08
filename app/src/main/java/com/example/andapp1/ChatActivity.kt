@@ -21,8 +21,17 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var viewModel: ChatViewModel
     private lateinit var layoutManager: LinearLayoutManager
     private lateinit var adapter: MessagesListAdapter<ChatMessage>
-    private var lastMapUrl: String? = null
 
+    override fun onResume() {
+        super.onResume()
+
+        // 만약 버튼이 안 떠 있는 상태라면 강제로 띄워줌
+        val rootView = findViewById<ViewGroup>(android.R.id.content)
+        val existing = rootView.findViewWithTag<FloatingActionButton>("map_restore_button")
+        if (existing == null) {
+            showMapRestoreButton()
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityChatBinding.inflate(layoutInflater)
@@ -113,7 +122,7 @@ class ChatActivity : AppCompatActivity() {
 
     private fun showMapRestoreButton() {
         val rootView = findViewById<ViewGroup>(android.R.id.content)
-        if (rootView.findViewWithTag<FloatingActionButton>("map_restore_button") != null) return
+        if (rootView.findViewWithTag<View>("map_restore_button") != null) return
 
         val fab = FloatingActionButton(this).apply {
             tag = "map_restore_button"
@@ -136,6 +145,51 @@ class ChatActivity : AppCompatActivity() {
                 startActivity(intent)
             }
         }
+
+        // ✅ 드래그 기능 추가
+        fab.setOnTouchListener(object : View.OnTouchListener {
+            private var downRawX = 0f
+            private var downRawY = 0f
+            private var dX = 0f
+            private var dY = 0f
+
+            override fun onTouch(view: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        downRawX = event.rawX
+                        downRawY = event.rawY
+                        dX = view.x - downRawX
+                        dY = view.y - downRawY
+                        return true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val newX = event.rawX + dX
+                        val newY = event.rawY + dY
+                        view.animate()
+                            .x(newX)
+                            .y(newY)
+                            .setDuration(0)
+                            .start()
+                        return true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        val upRawX = event.rawX
+                        val upRawY = event.rawY
+                        val dx = upRawX - downRawX
+                        val dy = upRawY - downRawY
+
+                        val distanceSquared = dx * dx + dy * dy
+
+                        if (distanceSquared < 100) {
+                            // ✅ 클릭으로 간주 (드래그 거리 작음)
+                            view.performClick()
+                        }
+                        return true
+                    }
+                    else -> return false
+                }
+            }
+        })
 
         rootView.addView(fab)
     }

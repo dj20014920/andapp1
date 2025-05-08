@@ -1,41 +1,21 @@
 package com.example.andapp1
 
 import android.content.Intent
-import android.graphics.ImageDecoder
-import android.net.Uri
 import android.os.*
-import android.provider.MediaStore
 import android.util.Log
 import android.view.*
 import android.widget.FrameLayout
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.andapp1.databinding.ActivityChatBinding
-import com.example.andapp1.ocr.ReceiptOcrProcessor
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.database.FirebaseDatabase
 import com.stfalcon.chatkit.messages.*
 import kotlinx.coroutines.launch
 
 class ChatActivity : AppCompatActivity() {
-    private val receiptImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val source = ImageDecoder.createSource(contentResolver, uri)
-                ImageDecoder.decodeBitmap(source)
-            } else {
-                MediaStore.Images.Media.getBitmap(contentResolver, uri)
-            }
-            ReceiptOcrProcessor.copyTrainedDataIfNeeded(this)
-            val text = ReceiptOcrProcessor.processReceipt(this, bitmap)
-            val items = ReceiptOcrProcessor.extractItemPricePairs(text)
-            val message = ReceiptOcrProcessor.formatAnalysisResult(items, people = 4)
-            sendChatMessage(message)
-        }
-    }
 
     private lateinit var binding: ActivityChatBinding
     private lateinit var viewModel: ChatViewModel
@@ -61,8 +41,6 @@ class ChatActivity : AppCompatActivity() {
         binding.messagesList.layoutManager = layoutManager
         // 어댑터 초기화 및 UI 연결
         initializeAdapterAndListeners()
-
-
     }
 
     private fun initializeAdapterAndListeners() {
@@ -183,11 +161,6 @@ class ChatActivity : AppCompatActivity() {
                 DialogHelper.showParticipantsDialog(this, viewModel.roomCode)
                 true
             }
-            R.id.menu_receipt_ocr -> {
-                // 여기서 OCR 이미지 선택 시작
-                receiptImageLauncher.launch("image/*")
-                true
-            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -199,9 +172,4 @@ class ChatActivity : AppCompatActivity() {
             .child("participants")
         ref.child(userId).setValue(true)
     }
-    //OCR 결과나 기타 메시지를 채팅창에 자동을 전송할 때 사용하는 함수
-    private fun sendChatMessage(message: String) {
-        viewModel.sendMessage(message)
-    }
-
 }

@@ -12,22 +12,35 @@ object FirebaseRoomManager {
         .getInstance("https://andapp1-bcb40-default-rtdb.firebaseio.com/") // 슬래시까지 정확히
         .getReference("rooms")
     // ✅ 전체 채팅방 실시간 감지
-    fun getRooms(onComplete: (List<Room>) -> Unit) {
-        roomsRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                Log.d("FirebaseRoomManager", "✅ getRooms onDataChange 호출됨")
-                val rooms = mutableListOf<Room>()
-                for (roomSnapshot in snapshot.children) {
-                    val room = roomSnapshot.getValue(Room::class.java)
-                    room?.let { rooms.add(it) }
+    fun getRooms(userId: String, callback: (List<Room>) -> Unit) {
+        roomsRef.get().addOnSuccessListener { snapshot ->
+            val userRooms = mutableListOf<Room>()
+
+            for (roomSnapshot in snapshot.children) {
+                val participantsSnapshot = roomSnapshot.child("participants")
+                val isParticipant = participantsSnapshot.hasChild(userId)
+
+                if (isParticipant) {
+                    val roomCode = roomSnapshot.key ?: continue
+                    val roomTitle = roomSnapshot.child("roomTitle").getValue(String::class.java) ?: "이름 없는 방"
+                    val lastActivity = roomSnapshot.child("lastActivityTime").getValue(String::class.java) ?: ""
+
+                    val room = Room(
+                        roomCode = roomCode,
+                        roomTitle = roomTitle,
+                        lastActivityTime = lastActivity,
+                        isFavorite = false // 즐겨찾기는 나중에 local에서 체크해서 대입
+                    )
+
+                    userRooms.add(room)
                 }
-                onComplete(rooms)
             }
 
-            override fun onCancelled(error: DatabaseError) {
-                Log.e("FirebaseRoomManager", "❌ getRooms 실패: ${error.message}")
-            }
-        })
+            callback(userRooms)
+        }.addOnFailureListener {
+            Log.e("FirebaseRoomManager", "❌ 방 목록 가져오기 실패", it)
+            callback(emptyList())
+        }
     }
 
     // ✅ 채팅방 생성

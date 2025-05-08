@@ -115,6 +115,56 @@ object FirebaseRoomManager {
         roomsRef.child(roomCode).child("lastActivityTime").setValue(newTime)
     }
 
+    fun checkInactiveRooms() {
+        roomsRef.get().addOnSuccessListener { snapshot ->
+            val currentTimeMillis = System.currentTimeMillis()
+
+            for (roomSnapshot in snapshot.children) {
+                val roomCode = roomSnapshot.key ?: continue
+                val lastActivityStr = roomSnapshot.child("lastActivityTime").getValue(String::class.java) ?: continue
+                val lastActivityMillis = try {
+                    Util.parseTimestampToMillis(lastActivityStr)
+                } catch (e: Exception) {
+                    Log.e("RoomCheck", "❌ 시간 파싱 실패: $roomCode", e)
+                    continue
+                }
+
+                val elapsedDays = (currentTimeMillis - lastActivityMillis) / (1000 * 60 * 60 * 24)
+
+                when (elapsedDays) {
+                    6L -> {
+                        // ✅ 6일 경과: 시스템 메시지 전송
+                        sendSystemWarning(roomCode)
+                    }
+                    in 7L..Long.MAX_VALUE -> {
+                        // ✅ 7일 이상 경과: Firebase에서 삭제
+                        deleteRoom(roomCode)
+                        Log.d("RoomCheck", "🗑 방 삭제됨: $roomCode")
+                    }
+                    else -> {
+                        // 아직 삭제 조건 아님
+                    }
+                }
+            }
+        }.addOnFailureListener {
+            Log.e("RoomCheck", "❌ 전체 방 확인 실패", it)
+        }
+    }
+    fun sendSystemWarning(roomCode: String) {
+        val message = ChatMessage(
+            id = System.currentTimeMillis().toString(),
+            text = "⚠️ 이 채팅방은 24시간 내에 삭제될 예정입니다.\n활동이 없으면 자동 삭제됩니다.",
+            user = Author("system", "System"),
+            createdAt = Date()
+        )
+
+        val messageRef = FirebaseDatabase.getInstance()
+            .getReference("messages")
+            .child(roomCode)
+            .push()
+
+        messageRef.setValue(message)
+    }
     // ✅ 채팅방 삭제
     fun deleteRoom(roomCode: String) {
         roomsRef.child(roomCode).removeValue()

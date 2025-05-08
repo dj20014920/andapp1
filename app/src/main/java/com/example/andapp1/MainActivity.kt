@@ -26,8 +26,9 @@ import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import android.content.Context
 import android.util.Base64
+import com.google.firebase.messaging.FirebaseMessaging
+import com.jakewharton.threetenabp.AndroidThreeTen
 
-//todo 다른 사용자가 방을 생성하면 내 채팅창 목록에도 바로 뜨는 거 수정하기 입장하기를 안눌러도 바로뜸
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -38,6 +39,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AndroidThreeTen.init(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         fun getHashKey(context: Context) {
 
@@ -80,6 +82,8 @@ class MainActivity : AppCompatActivity() {
             finish()
             return
         }
+        // 카카오 로그인 완료 후 userId가 정해진 뒤
+        saveFcmTokenToFirebase(userId)
         setContentView(binding.root)
 
         // ViewModel 설정
@@ -192,6 +196,30 @@ class MainActivity : AppCompatActivity() {
             Log.e("AutoLogin", "사용자 정보 조회 실패", it)
         }
     }
+
+    fun saveFcmTokenToFirebase(userId: String) {
+        FirebaseMessaging.getInstance().token
+            .addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    Log.w("FCM", "❌ FCM 토큰 가져오기 실패", task.exception)
+                    return@addOnCompleteListener
+                }
+
+                val token = task.result
+                val ref = FirebaseDatabase.getInstance()
+                    .getReference("userTokens")
+                    .child(userId)
+
+                ref.setValue(token)
+                    .addOnSuccessListener {
+                        Log.d("FCM", "✅ FCM 토큰 저장 완료: $token")
+                    }
+                    .addOnFailureListener {
+                        Log.e("FCM", "❌ FCM 토큰 저장 실패", it)
+                    }
+            }
+    }
+
     private fun setupButtonClickListeners() {
         // 방 생성하기
         binding.createRoomButton.setOnClickListener {

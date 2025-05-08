@@ -75,7 +75,7 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("com.google.android.flexbox:flexbox:3.0.0")
-
+    implementation("com.jakewharton.threetenabp:threetenabp:1.4.5")
     // Room
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

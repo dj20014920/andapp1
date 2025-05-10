@@ -3,7 +3,8 @@ package com.example.andapp1
 import android.content.Context
 import android.content.Intent
 import android.widget.ArrayAdapter
-import androidx.appcompat.app.AlertDialog
+import android.app.AlertDialog
+import android.widget.EditText
 import com.google.firebase.database.*
 
 object ScrapDialogHelper {
@@ -36,13 +37,25 @@ object ScrapDialogHelper {
                 val adapter = ArrayAdapter(
                     context,
                     android.R.layout.simple_list_item_1,
-                    scrapList.map { it.name })
+                    scrapList.map { it.name }
+                )
 
                 AlertDialog.Builder(context)
                     .setTitle("📌 스크랩 목록")
                     .setAdapter(adapter) { _, which ->
-                        val url = scrapList[which].url
-                        openWebView(context, url, roomCode)
+                        val selectedScrap = scrapList[which]
+
+                        AlertDialog.Builder(context)
+                            .setTitle("📌 ${selectedScrap.name}")
+                            .setItems(arrayOf("열기", "이름 수정", "삭제")) { _, action ->
+                                when (action) {
+                                    0 -> openWebView(context, selectedScrap.url, roomCode)
+                                    1 -> showRenameDialog(context, roomCode, selectedScrap)
+                                    2 -> deleteScrap(roomCode, selectedScrap)
+                                }
+                            }
+                            .setNegativeButton("닫기", null)
+                            .show()
                     }
                     .setNegativeButton("닫기", null)
                     .show()
@@ -55,6 +68,56 @@ object ScrapDialogHelper {
                     .setPositiveButton("확인", null)
                     .show()
             }
+        })
+    }
+
+    private fun showRenameDialog(context: Context, roomCode: String, scrap: ScrapItem) {
+        val input = EditText(context).apply {
+            setText(scrap.name)
+        }
+
+        AlertDialog.Builder(context)
+            .setTitle("이름 수정")
+            .setView(input)
+            .setPositiveButton("확인") { _, _ ->
+                val newName = input.text.toString().trim()
+                if (newName.isNotEmpty() && newName != scrap.name) {
+                    val scrapRef = FirebaseDatabase.getInstance()
+                        .getReference("scraps")
+                        .child(roomCode)
+                        .orderByChild("url")
+                        .equalTo(scrap.url)
+
+                    scrapRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(snapshot: DataSnapshot) {
+                            for (child in snapshot.children) {
+                                child.ref.child("name").setValue(newName)
+                            }
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {}
+                    })
+                }
+            }
+            .setNegativeButton("취소", null)
+            .show()
+    }
+
+    private fun deleteScrap(roomCode: String, scrap: ScrapItem) {
+        val scrapRef = FirebaseDatabase.getInstance()
+            .getReference("scraps")
+            .child(roomCode)
+            .orderByChild("url")
+            .equalTo(scrap.url)
+
+        scrapRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                for (child in snapshot.children) {
+                    child.ref.removeValue()
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
         })
     }
 

@@ -38,6 +38,12 @@ class RoomActivity : AppCompatActivity() {
 
             val shareIntent = Intent.createChooser(sendIntent, "공유하기")
             startActivity(shareIntent)
+            // 마지막에 ChatActivity로 이동
+            val intent = Intent(this, ChatActivity::class.java).apply {
+                putExtra("roomCode", roomCode)
+                putExtra("roomName", binding.roomCodeTextView.text.toString()) // 있으면
+            }
+            startActivity(intent)
         }
     }
 }

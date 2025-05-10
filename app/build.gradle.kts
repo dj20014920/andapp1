@@ -6,7 +6,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
     id("com.google.gms.google-services")
-    id("com.google.devtools.ksp") version "2.1.20-1.0.32"
+    id("com.google.devtools.ksp")
 
 }
 
@@ -68,16 +68,16 @@ dependencies {
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-database:21.0.0")
     implementation("com.google.firebase:firebase-analytics:22.4.0")
-
+    implementation("com.google.firebase:firebase-messaging:24.1.1")
     // UI + 라이브러리
 
-    implementation ("androidx.annotation:annotation:1.7.0") // 또는 최신 버전
+    implementation ("androidx.annotation:annotation:1.9.1") // 또는 최신 버전
     implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.google.android.material:material:1.11.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+    implementation("androidx.core:core-ktx:1.16.0")
     implementation("com.google.android.flexbox:flexbox:3.0.0")
-
+    implementation("com.jakewharton.threetenabp:threetenabp:1.4.5")
     // Room
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

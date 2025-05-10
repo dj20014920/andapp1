@@ -25,9 +25,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import android.content.Context
+import android.os.Looper
 import android.util.Base64
-
-//todo 다른 사용자가 방을 생성하면 내 채팅창 목록에도 바로 뜨는 거 수정하기 입장하기를 안눌러도 바로뜸
+import androidx.core.os.postDelayed
+import com.google.firebase.messaging.FirebaseMessaging
+import com.jakewharton.threetenabp.AndroidThreeTen
+import android.os.Handler
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -38,6 +41,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AndroidThreeTen.init(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         fun getHashKey(context: Context) {
 
@@ -80,6 +84,8 @@ class MainActivity : AppCompatActivity() {
             finish()
             return
         }
+        // 카카오 로그인 완료 후 userId가 정해진 뒤
+        saveFcmTokenToFirebase(userId)
         setContentView(binding.root)
 
         // ViewModel 설정
@@ -192,6 +198,30 @@ class MainActivity : AppCompatActivity() {
             Log.e("AutoLogin", "사용자 정보 조회 실패", it)
         }
     }
+
+    fun saveFcmTokenToFirebase(userId: String) {
+        FirebaseMessaging.getInstance().token
+            .addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    Log.w("FCM", "❌ FCM 토큰 가져오기 실패", task.exception)
+                    return@addOnCompleteListener
+                }
+
+                val token = task.result
+                val ref = FirebaseDatabase.getInstance()
+                    .getReference("userTokens")
+                    .child(userId)
+
+                ref.setValue(token)
+                    .addOnSuccessListener {
+                        Log.d("FCM", "✅ FCM 토큰 저장 완료: $token")
+                    }
+                    .addOnFailureListener {
+                        Log.e("FCM", "❌ FCM 토큰 저장 실패", it)
+                    }
+            }
+    }
+
     private fun setupButtonClickListeners() {
         // 방 생성하기
         binding.createRoomButton.setOnClickListener {
@@ -227,65 +257,66 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val shareIntent = Intent.createChooser(sendIntent, "공유하기")
-                startActivity(shareIntent)
-            }
-        }
+                startActivity(shareIntent) // 📌 공유 먼저
 
-        // 입장하기 버튼 클릭 시
-        binding.enterButton.setOnClickListener {
-            val input = binding.enterCodeOrLinkEditText.text.toString().trim().uppercase()
-            val currentRooms = viewModel.rooms.value ?: emptyList()
-            if (currentRooms.size >= MAX_ROOMS) {
-                Toast.makeText(this, "최대 채팅방 개수(5개)를 초과했습니다.", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            val roomCode = when {
-                viewModel.isRoomCode(input) -> input
-                viewModel.isRoomLink(input) -> viewModel.extractRoomCodeFromLink(input)
-                else -> null
-            }
-
-            if (roomCode == null) {
-                Toast.makeText(this, "올바른 코드 또는 링크를 입력해주세요.", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (currentRooms.any { it.roomCode == roomCode }) {
-                Toast.makeText(this, "이미 참여한 채팅방입니다.", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            val newRoom = Room(
-                roomCode = roomCode,
-                roomTitle = "채팅방 : $roomCode",
-                lastActivityTime = Util.getCurrentTime(),
-                isFavorite = false
-            )
-
-            viewModel.addRoom(newRoom)
-
-            Log.d("MainActivity", "방 생성 요청: ${newRoom.roomCode}")
-
-            val data: Uri? = intent?.data
-            data?.let {
-                val roomCode = it.getQueryParameter("code") // URL의 ?code=XXX-XXX 추출
-                if (!roomCode.isNullOrEmpty()) {
-                    val newRoom = Room(
-                        roomCode = roomCode,
-                        roomTitle = "채팅방 : $roomCode",
-                        lastActivityTime = Util.getCurrentTime(),
-                        isFavorite = false
-                    )
-
-                    viewModel.addRoom(newRoom)
-
+                Handler(Looper.getMainLooper()).postDelayed({
                     val intent = Intent(this, ChatActivity::class.java).apply {
-                        putExtra("roomCode", roomCode)
+                        putExtra("roomCode", newRoom.roomCode)
                         putExtra("roomName", newRoom.roomTitle)
                     }
                     startActivity(intent)
+                }, 1000) // 1초 뒤 실행 (필요하면 조절)
+        }
+
+        // 입장하기 버튼 클릭 시
+            binding.enterButton.setOnClickListener {
+                val input = binding.enterCodeOrLinkEditText.text.toString().trim().uppercase()
+                val currentRooms = viewModel.rooms.value ?: emptyList()
+
+                if (currentRooms.size >= MAX_ROOMS) {
+                    Toast.makeText(this, "최대 채팅방 개수(5개)를 초과했습니다.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
                 }
+
+                val roomCode = when {
+                    viewModel.isRoomCode(input) -> input
+                    viewModel.isRoomLink(input) -> viewModel.extractRoomCodeFromLink(input)
+                    else -> null
+                }
+
+                if (roomCode == null) {
+                    Toast.makeText(this, "올바른 코드 또는 링크를 입력해주세요.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                // ✅ 여기서 Firebase에서 방 확인 후 입장 처리
+                FirebaseDatabase.getInstance().getReference("rooms")
+                    .child(roomCode)
+                    .get()
+                    .addOnSuccessListener { snapshot ->
+                        if (snapshot.exists()) {
+                            val userId = getSharedPreferences("login", MODE_PRIVATE).getString("userId", null)
+                            if (userId != null) {
+                                FirebaseRoomManager.addParticipant(roomCode, userId)
+                            }
+
+                            val newRoom = Room(
+                                roomCode = roomCode,
+                                roomTitle = snapshot.child("roomTitle").getValue(String::class.java) ?: "채팅방",
+                                lastActivityTime = Util.getCurrentTime(),
+                                isFavorite = false
+                            )
+                            viewModel.addRoom(newRoom)
+
+                            val intent = Intent(this, ChatActivity::class.java).apply {
+                                putExtra("roomCode", newRoom.roomCode)
+                                putExtra("roomName", newRoom.roomTitle)
+                            }
+                            startActivity(intent)
+                        } else {
+                            Toast.makeText(this, "존재하지 않는 방 코드입니다.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
             }
         }
     }

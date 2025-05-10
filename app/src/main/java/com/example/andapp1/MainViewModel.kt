@@ -11,6 +11,8 @@ import com.example.andapp1.FirebaseRoomManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.content.Context
+import com.google.firebase.database.FirebaseDatabase
+
 class MainViewModel(
     val roomRepository: RoomRepository,
     private val context: Context
@@ -39,24 +41,30 @@ class MainViewModel(
     }
 
     init {
-        FirebaseRoomManager.getRooms { roomsFromFirebase ->
-            viewModelScope.launch(Dispatchers.IO) {
-                Log.d("MainViewModel", "✅ getRooms 호출됨")
-                val favoriteCodes = roomRepository.getFavoriteRoomCodes()
-                val merged = roomsFromFirebase.map {
-                    it.copy(isFavorite = favoriteCodes.contains(it.roomCode))
+        viewModelScope.launch(Dispatchers.IO) {
+            val user = RoomDatabaseInstance.getInstance(context).userDao().getUser()
+            val userId = user?.id ?: return@launch
+
+            FirebaseRoomManager.getRooms(userId) { roomsFromFirebase ->
+                viewModelScope.launch(Dispatchers.IO) {
+                    val favoriteCodes = roomRepository.getFavoriteRoomCodes()
+                    val merged = roomsFromFirebase.map {
+                        it.copy(isFavorite = favoriteCodes.contains(it.roomCode))
+                    }
+                    _rooms.postValue(merged)
                 }
-                _rooms.postValue(merged)
             }
         }
     }
 
     fun addRoom(room: Room) {
-        // Firebase에 먼저 방 저장
-        FirebaseRoomManager.createRoom(room)
-
-        // 로컬 RoomDB에 즐겨찾기 여부 저장
         viewModelScope.launch {
+            val user = RoomDatabaseInstance.getInstance(context).userDao().getUser()
+            val userId = user?.id ?: return@launch
+
+            FirebaseRoomManager.createRoom(room, userId) // ✅ userId 함께 전달
+
+            // RoomDB에 저장
             val roomEntity = RoomEntity(
                 roomCode = room.roomCode,
                 roomTitle = room.roomTitle,
@@ -81,6 +89,7 @@ class MainViewModel(
             }
         }
     }
+
     fun leaveRoom(roomCode: String) {
         viewModelScope.launch {
             val user = withContext(Dispatchers.IO) {
@@ -90,23 +99,39 @@ class MainViewModel(
             if (user != null) {
                 val author = Author(user.id, user.nickname ?: "알 수 없음")
 
-                // ❌ Firebase 참여자 제거는 생략 (기록 유지 목적)
                 // ✅ 시스템 메시지 전송
                 FirebaseRoomManager.sendLeaveMessage(roomCode, author)
 
-                // ✅ RoomDB에서만 제거 (로컬 기록 삭제)
+                // ✅ Firebase에서 참여자 제거
+                val participantsRef = FirebaseDatabase.getInstance()
+                    .getReference("rooms")
+                    .child(roomCode)
+                    .child("participants")
+
+                participantsRef.child(user.id).removeValue().addOnSuccessListener {
+                    // ✅ 참여자 제거 후, 인원 수 체크
+                    participantsRef.get().addOnSuccessListener { snapshot ->
+                        if (!snapshot.hasChildren()) {
+                            FirebaseRoomManager.deleteRoom(roomCode)
+                            Log.d("RoomExit", "⚠️ 마지막 사용자가 나가 방 삭제됨: $roomCode")
+                        }
+                    }
+                }
+
+                // ✅ 로컬 DB에서 방 제거
                 roomRepository.deleteRoomByCode(roomCode)
 
-                // ✅ UI에서 제거
-                val updatedRooms = _rooms.value?.filterNot { it.roomCode == roomCode }
+                // ✅ UI 갱신
+                val updatedRooms = _rooms.value?.filterNot { it.roomCode == roomCode } ?: emptyList()
                 _rooms.postValue(updatedRooms)
 
-                Log.d("MainViewModel", "✅ ${author.name}님이 채팅방에서 나갔습니다. (로컬 기준)")
+                Log.d("MainViewModel", "✅ ${author.name}님이 채팅방에서 나갔습니다.")
             } else {
                 Log.e("MainViewModel", "❌ 사용자 정보를 불러오지 못했습니다. 나가기 실패.")
             }
         }
     }
+
     fun updateLastActivityTime(code: String, time: String) {
         FirebaseRoomManager.updateLastActivityTime(code, time)
     }

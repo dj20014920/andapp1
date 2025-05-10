@@ -3,7 +3,9 @@ package com.example.andapp1
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
+import org.threeten.bp.LocalDateTime
+import org.threeten.bp.ZoneId
+import org.threeten.bp.format.DateTimeFormatter
 object Util {
     fun getCurrentTime(): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
@@ -22,7 +24,12 @@ object Util {
             isFavorite = this.isFavorite
         )
     }
-
+    fun parseTimestampToMillis(timeStr: String): Long {
+        val formatter = DateTimeFormatter.ISO_DATE_TIME
+        val dateTime = LocalDateTime.parse(timeStr, formatter)
+        val zone = ZoneId.systemDefault()
+        return dateTime.atZone(zone).toInstant().toEpochMilli()
+    }
     fun Room.toRoomEntity(): RoomEntity {
         return RoomEntity(
             roomCode = this.roomCode,

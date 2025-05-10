@@ -18,7 +18,7 @@ import com.kakao.sdk.user.UserApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
+import com.google.firebase.messaging.FirebaseMessaging
 // LoginActivity.kt
 class LoginActivity : AppCompatActivity() {
 
@@ -57,7 +57,6 @@ class LoginActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun fetchKakaoUserInfo() {
         UserApiClient.instance.me { user, error ->
             if (error != null) {

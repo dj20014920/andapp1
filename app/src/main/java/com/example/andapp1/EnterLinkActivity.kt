@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.andapp1.databinding.ActivityEnterLinkBinding
+import com.google.firebase.database.FirebaseDatabase
 
 class EnterLinkActivity : AppCompatActivity() {
 
@@ -34,7 +35,23 @@ class EnterLinkActivity : AppCompatActivity() {
                 Toast.makeText(this, "올바른 링크가 아닙니다.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+            FirebaseDatabase.getInstance()
+                .getReference("rooms")
+                .child(roomCode)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    if (snapshot.exists()) {
+                        val roomTitle = snapshot.child("roomTitle").getValue(String::class.java) ?: "채팅방"
 
+                        val intent = Intent(this, ChatActivity::class.java).apply {
+                            putExtra("roomCode", roomCode)
+                            putExtra("roomName", roomTitle)
+                        }
+                        startActivity(intent)
+                    } else {
+                        Toast.makeText(this, "존재하지 않는 링크입니다.", Toast.LENGTH_SHORT).show()
+                    }
+                }
             Toast.makeText(this, "입장할 링크: $link", Toast.LENGTH_SHORT).show()
             val intent = Intent(this, RoomActivity::class.java)
             intent.putExtra("roomCode", roomCode)

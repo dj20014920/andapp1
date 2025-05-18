@@ -1,7 +1,6 @@
 import org.gradle.kotlin.dsl.implementation
 
 plugins {
-
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
@@ -41,12 +40,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "21"
+        jvmTarget = "17"
     }
 }
 repositories {
@@ -94,4 +93,7 @@ dependencies {
     // 내부 프로젝트
     implementation(project(":chatkit"))
     implementation("com.rmtheis:tess-two:9.1.0")
+    implementation(project(":openCVLibrary"))
+
+
 }

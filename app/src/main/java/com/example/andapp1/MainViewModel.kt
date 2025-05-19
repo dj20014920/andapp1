@@ -136,10 +136,6 @@ class MainViewModel(
         FirebaseRoomManager.updateLastActivityTime(code, time)
     }
 
-    fun removeRoom(code: String) {
-        FirebaseRoomManager.deleteRoom(code)
-    }
-
     // Room - 즐겨찾기 저장
     fun insertFavoriteRoom(roomEntity: RoomEntity) {
         viewModelScope.launch {
@@ -151,27 +147,6 @@ class MainViewModel(
     fun deleteFavoriteRoom(roomEntity: RoomEntity) {
         viewModelScope.launch {
             roomRepository.deleteFavoriteRoom(roomEntity)
-        }
-    }
-
-    // Room - 즐겨찾기 상태 변경
-    fun updateFavorite(roomCode: String, isFavorite: Boolean) {
-        viewModelScope.launch {
-            roomRepository.updateFavoriteStatus(roomCode, isFavorite)
-        }
-    }
-
-    // Room - 채팅방 이름 변경
-    fun updateRoomTitle(roomCode: String, newTitle: String) {
-        viewModelScope.launch {
-            roomRepository.updateRoomTitle(roomCode, newTitle)
-        }
-    }
-
-    // Room - 마지막 채팅 시간 업데이트
-    fun updateRoomLastActivityTime(roomCode: String, time: String) {
-        viewModelScope.launch {
-            roomRepository.updateLastActivityTime(roomCode, time)
         }
     }
 }

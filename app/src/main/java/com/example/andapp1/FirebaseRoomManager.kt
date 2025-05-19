@@ -12,14 +12,20 @@ object FirebaseRoomManager {
         .getInstance("https://andapp1-bcb40-default-rtdb.firebaseio.com/") // 슬래시까지 정확히
         .getReference("rooms")
     // ✅ 전체 채팅방 실시간 감지
-    fun getRooms(onComplete: (List<Room>) -> Unit) {
+    fun getRooms(userId: String, onComplete: (List<Room>) -> Unit) {
         roomsRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                Log.d("FirebaseRoomManager", "✅ getRooms onDataChange 호출됨")
+                Log.d("FirebaseRoomManager", "✅ getRooms 필터링된 onDataChange 호출됨")
+
                 val rooms = mutableListOf<Room>()
                 for (roomSnapshot in snapshot.children) {
-                    val room = roomSnapshot.getValue(Room::class.java)
-                    room?.let { rooms.add(it) }
+                    val participantsSnapshot = roomSnapshot.child("participants")
+                    val isParticipant = participantsSnapshot.hasChild(userId)
+
+                    if (isParticipant) {
+                        val room = roomSnapshot.getValue(Room::class.java)
+                        room?.let { rooms.add(it) }
+                    }
                 }
                 onComplete(rooms)
             }

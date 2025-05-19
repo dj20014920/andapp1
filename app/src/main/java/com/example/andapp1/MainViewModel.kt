@@ -39,14 +39,19 @@ class MainViewModel(
     }
 
     init {
-        FirebaseRoomManager.getRooms { roomsFromFirebase ->
-            viewModelScope.launch(Dispatchers.IO) {
-                Log.d("MainViewModel", "✅ getRooms 호출됨")
-                val favoriteCodes = roomRepository.getFavoriteRoomCodes()
-                val merged = roomsFromFirebase.map {
-                    it.copy(isFavorite = favoriteCodes.contains(it.roomCode))
+        viewModelScope.launch(Dispatchers.IO) {
+            val user = RoomDatabaseInstance.getInstance(context).userDao().getUser()
+            val userId = user?.id ?: return@launch
+
+            FirebaseRoomManager.getRooms(userId) { roomsFromFirebase ->
+                viewModelScope.launch(Dispatchers.IO) {
+                    Log.d("MainViewModel", "✅ getRooms(userId=$userId) 호출됨")
+                    val favoriteCodes = roomRepository.getFavoriteRoomCodes()
+                    val merged = roomsFromFirebase.map {
+                        it.copy(isFavorite = favoriteCodes.contains(it.roomCode))
+                    }
+                    _rooms.postValue(merged)
                 }
-                _rooms.postValue(merged)
             }
         }
     }

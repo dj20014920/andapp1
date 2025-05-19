@@ -98,7 +98,7 @@ class MainViewModel(
                 roomRepository.deleteRoomByCode(roomCode)
 
                 // ✅ UI에서 제거
-                val updatedRooms = _rooms.value?.filterNot { it.roomCode == roomCode }
+                val updatedRooms = _rooms.value?.filterNot { it.roomCode == roomCode } ?: emptyList()
                 _rooms.postValue(updatedRooms)
 
                 Log.d("MainViewModel", "✅ ${author.name}님이 채팅방에서 나갔습니다. (로컬 기준)")

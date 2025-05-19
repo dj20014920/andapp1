@@ -1,0 +1,17 @@
+{
+  "installationFolder": "C:\\Users\\ghkdd\\AndroidStudioProjects\\andapp1\\openCVLibrary\\build\\intermediates\\prefab_package\\debug\\prefab",
+  "gradlePath": ":openCVLibrary",
+  "packageInfo": {
+    "packageName": "openCVLibrary",
+    "packageSchemaVersion": 2,
+    "packageDependencies": [],
+    "modules": [
+      {
+        "moduleName": "opencv_jni_shared",
+        "moduleHeaders": "C:\\Users\\ghkdd\\AndroidStudioProjects\\andapp1\\openCVLibrary\\native\\jni\\include",
+        "moduleExportLibraries": [],
+        "abis": []
+      }
+    ]
+  }
+}

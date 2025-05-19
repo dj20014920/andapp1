@@ -12,39 +12,26 @@ object FirebaseRoomManager {
         .getInstance("https://andapp1-bcb40-default-rtdb.firebaseio.com/") // 슬래시까지 정확히
         .getReference("rooms")
     // ✅ 전체 채팅방 실시간 감지
-    fun getRooms(userId: String, callback: (List<Room>) -> Unit) {
-        roomsRef.get().addOnSuccessListener { snapshot ->
-            val userRooms = mutableListOf<Room>()
-
-            for (roomSnapshot in snapshot.children) {
-                val participantsSnapshot = roomSnapshot.child("participants")
-                val isParticipant = participantsSnapshot.hasChild(userId)
-
-                if (isParticipant) {
-                    val roomCode = roomSnapshot.key ?: continue
-                    val roomTitle = roomSnapshot.child("roomTitle").getValue(String::class.java) ?: "이름 없는 방"
-                    val lastActivity = roomSnapshot.child("lastActivityTime").getValue(String::class.java) ?: ""
-
-                    val room = Room(
-                        roomCode = roomCode,
-                        roomTitle = roomTitle,
-                        lastActivityTime = lastActivity,
-                        isFavorite = false // 즐겨찾기는 나중에 local에서 체크해서 대입
-                    )
-
-                    userRooms.add(room)
+    fun getRooms(onComplete: (List<Room>) -> Unit) {
+        roomsRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                Log.d("FirebaseRoomManager", "✅ getRooms onDataChange 호출됨")
+                val rooms = mutableListOf<Room>()
+                for (roomSnapshot in snapshot.children) {
+                    val room = roomSnapshot.getValue(Room::class.java)
+                    room?.let { rooms.add(it) }
                 }
+                onComplete(rooms)
             }
 
-            callback(userRooms)
-        }.addOnFailureListener {
-            Log.e("FirebaseRoomManager", "❌ 방 목록 가져오기 실패", it)
-            callback(emptyList())
-        }
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("FirebaseRoomManager", "❌ getRooms 실패: ${error.message}")
+            }
+        })
     }
 
     // ✅ 채팅방 생성
-    fun createRoom(room: Room, creatorId: String) {
+    fun createRoom(room: Room) {
         val roomRef = roomsRef.child(room.roomCode)
 
         Log.d("FirebaseRoomManager", "✅ createRoom 호출됨: ${room.roomCode}")
@@ -52,10 +39,9 @@ object FirebaseRoomManager {
         roomRef.setValue(room)
             .addOnSuccessListener {
                 Log.d("FirebaseRoomManager", "✅ Firebase에 방 생성 성공: ${room.roomCode}")
-                addParticipant(room.roomCode, creatorId) // ✅ 본인을 참여자로 추가
             }
-            .addOnFailureListener {
-                Log.e("FirebaseRoomManager", "❌ Firebase에 방 생성 실패", it)
+            .addOnFailureListener { e ->
+                Log.e("FirebaseRoomManager", "❌ Firebase에 방 생성 실패: ${e.message}", e)
             }
     }
 
@@ -116,56 +102,6 @@ object FirebaseRoomManager {
         roomsRef.child(roomCode).child("lastActivityTime").setValue(newTime)
     }
 
-    fun checkInactiveRooms() {
-        roomsRef.get().addOnSuccessListener { snapshot ->
-            val currentTimeMillis = System.currentTimeMillis()
-
-            for (roomSnapshot in snapshot.children) {
-                val roomCode = roomSnapshot.key ?: continue
-                val lastActivityStr = roomSnapshot.child("lastActivityTime").getValue(String::class.java) ?: continue
-                val lastActivityMillis = try {
-                    Util.parseTimestampToMillis(lastActivityStr)
-                } catch (e: Exception) {
-                    Log.e("RoomCheck", "❌ 시간 파싱 실패: $roomCode", e)
-                    continue
-                }
-
-                val elapsedDays = (currentTimeMillis - lastActivityMillis) / (1000 * 60 * 60 * 24)
-
-                when (elapsedDays) {
-                    6L -> {
-                        // ✅ 6일 경과: 시스템 메시지 전송
-                        sendSystemWarning(roomCode)
-                    }
-                    in 7L..Long.MAX_VALUE -> {
-                        // ✅ 7일 이상 경과: Firebase에서 삭제
-                        deleteRoom(roomCode)
-                        Log.d("RoomCheck", "🗑 방 삭제됨: $roomCode")
-                    }
-                    else -> {
-                        // 아직 삭제 조건 아님
-                    }
-                }
-            }
-        }.addOnFailureListener {
-            Log.e("RoomCheck", "❌ 전체 방 확인 실패", it)
-        }
-    }
-    fun sendSystemWarning(roomCode: String) {
-        val message = ChatMessage(
-            id = System.currentTimeMillis().toString(),
-            text = "⚠️ 이 채팅방은 24시간 내에 삭제될 예정입니다.\n활동이 없으면 자동 삭제됩니다.",
-            user = Author("system", "System"),
-            createdAt = Date()
-        )
-
-        val messageRef = FirebaseDatabase.getInstance()
-            .getReference("messages")
-            .child(roomCode)
-            .push()
-
-        messageRef.setValue(message)
-    }
     // ✅ 채팅방 삭제
     fun deleteRoom(roomCode: String) {
         roomsRef.child(roomCode).removeValue()
@@ -178,18 +114,7 @@ object FirebaseRoomManager {
 
     // ✅ 참여자 제거 (선택 사항)
     fun removeParticipant(roomCode: String, userId: String) {
-        val participantsRef = roomsRef.child(roomCode).child("participants")
-
-        participantsRef.child(userId).removeValue().addOnSuccessListener {
-            // 삭제 후 남은 인원 확인
-            participantsRef.get().addOnSuccessListener { snapshot ->
-                if (!snapshot.hasChildren()) {
-                    // 아무도 없으면 방 삭제
-                    deleteRoom(roomCode)
-                    Log.d("FirebaseRoomManager", "🚨 모든 참여자가 나갔으므로 방 삭제됨: $roomCode")
-                }
-            }
-        }
+        roomsRef.child(roomCode).child("participants").child(userId).removeValue()
     }
 
     fun sendLeaveMessage(roomCode: String, author: Author) {

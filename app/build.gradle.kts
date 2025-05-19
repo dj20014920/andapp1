@@ -58,19 +58,19 @@ ksp {
 }
 dependencies {
     //카카오
-    implementation("com.kakao.sdk:v2-talk:2.21.1") // 친구 목록 등
-    implementation("com.kakao.sdk:v2-share:2.21.1") // 카카오톡 공유
-    implementation("com.kakao.sdk:v2-user:2.21.1") // 최신 버전 확인
+    implementation("com.kakao.sdk:v2-talk:2.21.1")
+    implementation("com.kakao.sdk:v2-share:2.21.1")
+    implementation("com.kakao.sdk:v2-user:2.21.1")
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:33.12.0"))
-    implementation ("com.google.firebase:firebase-storage-ktx")// ✅ Storage 용
+    implementation ("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-database:21.0.0")
     implementation("com.google.firebase:firebase-analytics:22.4.0")
 
     // UI + 라이브러리
 
-    implementation ("androidx.annotation:annotation:1.7.0") // 또는 최신 버전
+    implementation ("androidx.annotation:annotation:1.7.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
@@ -81,7 +81,7 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     implementation ("androidx.lifecycle:lifecycle-livedata-ktx:2.8.7")
-    ksp("androidx.room:room-compiler:2.6.1") // ✅ KSP 사용
+    ksp("androidx.room:room-compiler:2.6.1")
 
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")

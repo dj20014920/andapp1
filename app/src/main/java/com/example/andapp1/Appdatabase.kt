@@ -9,10 +9,10 @@ import com.example.andapp1.RoomEntity
 @Database(
     entities = [RoomEntity::class, UserEntity::class],
     version = 4,
-    exportSchema = false // ✅ 경고 방지!
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun roomDao(): RoomDao
-    abstract fun userDao(): UserDao // ✅ 추가
+    abstract fun userDao(): UserDao
 
 }

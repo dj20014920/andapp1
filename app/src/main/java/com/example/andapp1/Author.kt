@@ -8,7 +8,7 @@ class Author(
     private var avatar: String? = null
 ) : IUser {
 
-    constructor() : this("", "", null) // Firebase 역직렬화용 빈 생성자
+    constructor() : this("", "", null)
 
     override fun getId(): String = id
     override fun getName(): String = name

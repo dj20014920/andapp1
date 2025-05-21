@@ -1,5 +1,6 @@
 package com.example.andapp1
 
+import android.content.Intent
 import android.widget.ImageView
 import com.bumptech.glide.Glide
 import com.stfalcon.chatkit.commons.models.MessageContentType
@@ -15,5 +16,13 @@ class IncomingImageMessageViewHolder(itemView: View) :
         Glide.with(itemView.context)
             .load(message.imageUrl)
             .into(imageView)
+
+        imageView.setOnClickListener {
+            val context = itemView.context
+            val intent = Intent(context, ImageViewerActivity::class.java).apply {
+                putExtra("imageUrl", message.imageUrl)
+            }
+            context.startActivity(intent)
+        }
     }
 }

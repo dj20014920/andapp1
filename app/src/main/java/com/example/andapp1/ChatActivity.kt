@@ -33,7 +33,11 @@ import kotlinx.coroutines.launch
 import java.io.File
 import android.Manifest
 import android.graphics.BitmapFactory
+import com.bumptech.glide.Glide
+import com.stfalcon.chatkit.commons.ImageLoader
 import org.opencv.android.OpenCVLoader
+import java.util.Date
+
 
 class ChatActivity : AppCompatActivity() {
 
@@ -43,6 +47,29 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var adapter: MessagesListAdapter<ChatMessage>
     private var lastMapUrl: String? = null
     private var cameraImageUri: Uri? = null
+    private var photoSendUri: Uri? = null
+    private var currentUser: UserEntity? = null
+    private lateinit var photoUri: Uri
+    private lateinit var senderId: String
+
+
+    private fun openCamera() {
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.TITLE, "New Picture")
+            put(MediaStore.Images.Media.DESCRIPTION, "From Camera")
+        }
+        photoUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)!!
+
+        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+            putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+        }
+        startActivityForResult(cameraIntent, REQUEST_CAMERA)
+    }
+
+    private fun openGallery() {
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        startActivityForResult(intent, REQUEST_GALLERY)
+    }
 
     private val receiptImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
@@ -84,8 +111,14 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-
-
+    private val photoSendLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK && photoSendUri != null) {
+            Log.d("PHOTO", "📷 촬영 성공 → 이미지 URI = $photoSendUri")
+            uploadImageToFirebase(photoSendUri!!)
+        } else {
+            Log.e("PHOTO", "❌ 사진 촬영 실패 또는 URI 없음")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -110,22 +143,64 @@ class ChatActivity : AppCompatActivity() {
         initializeAdapterAndListeners()
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (resultCode == RESULT_OK) {
+            when (requestCode) {
+                REQUEST_CAMERA -> {
+                    sendImageMessage(photoUri.toString())
+                }
+                REQUEST_GALLERY -> {
+                    val selectedImageUri = data?.data
+                    if (selectedImageUri != null) {
+                        sendImageMessage(selectedImageUri.toString())
+                    }
+                }
+            }
+        }
+    }
+
+
     private fun initializeAdapterAndListeners() {
         lifecycleScope.launch {
             val user = RoomDatabaseInstance.getInstance(applicationContext).userDao().getUser()
-            val senderId = user?.id ?: "unknown"
-
+            currentUser = user // 저장!
+            senderId = currentUser?.id ?: "unknown"
+            Log.d("🔍 ChatDebug", "MessagesListAdapter senderId = $senderId")
             val holders = MessageHolders()
-                .setIncomingTextConfig(TextMessageViewHolder::class.java, R.layout.item_incoming_text_message)
-                .setOutcomingTextConfig(TextMessageViewHolder::class.java, R.layout.item_outcoming_text_message)
-
-            adapter = MessagesListAdapter(senderId, holders, null)
+                .setOutcomingImageHolder(
+                    OutcomingImageMessageViewHolder::class.java,
+                    R.layout.item_outcoming_image_message
+                )
+                .setIncomingImageHolder(
+                    IncomingImageMessageViewHolder::class.java,
+                    R.layout.item_incoming_image_message
+                )
+            val imageLoader = ImageLoader { imageView, url, _ ->
+                Glide.with(imageView.context).load(url).into(imageView)
+            }
+            adapter = MessagesListAdapter<ChatMessage>(senderId, holders, imageLoader)
             binding.messagesList.setAdapter(adapter)
+
 
             binding.customMessageInput.setInputListener { input ->
                 viewModel.sendMessage(input.toString())
                 Handler(Looper.getMainLooper()).postDelayed({ scrollToBottomSmooth() }, 300)
                 true
+            }
+
+            binding.btnSendPhoto.setOnClickListener {
+                val options = arrayOf("사진 촬영", "갤러리에서 선택")
+                AlertDialog.Builder(this@ChatActivity)
+                    .setTitle("사진 선택")
+                    .setItems(options) { _, which ->
+                        when (which) {
+                            0 -> openCamera()
+                            1 -> openGallery()
+                        }
+                    }
+                    .show()
             }
 
             observeMessages()
@@ -223,10 +298,6 @@ class ChatActivity : AppCompatActivity() {
             .show()
     }
 
-
-
-
-
     private fun processOcrWithPeopleInput(bitmap: Bitmap) {
         val participantsRef = FirebaseDatabase.getInstance()
             .getReference("rooms")
@@ -267,9 +338,78 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
+    fun launchPhotoSendCamera() {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "photo_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/ChatPhotos")
+            }
+        }
+
+        photoSendUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+        if (photoSendUri == null) {
+            Log.e("PHOTO", "❌ URI 생성 실패")
+            return
+        }
+
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+            putExtra(MediaStore.EXTRA_OUTPUT, photoSendUri)
+            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        photoSendLauncher.launch(intent)
+    }
+
+    private fun uploadImageToFirebase(uri: Uri) {
+        val fileName = "images/${System.currentTimeMillis()}.jpg"
+        val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference.child(fileName)
+
+        storageRef.putFile(uri)
+            .continueWithTask { task ->
+                if (!task.isSuccessful) {
+                    throw task.exception ?: Exception("이미지 업로드 실패")
+                }
+                storageRef.downloadUrl
+            }
+            .addOnSuccessListener { downloadUrl ->
+                Log.d("PHOTO", "✅ Firebase 업로드 성공 → $downloadUrl")
+                sendImageMessage(downloadUrl.toString())
+            }
+            .addOnFailureListener { e ->
+                Log.e("PHOTO", "❌ Firebase 업로드 실패: ${e.message}")
+                Toast.makeText(this, "사진 업로드 실패", Toast.LENGTH_SHORT).show()
+            }
+    }
+
 
     private fun sendChatMessage(message: String) {
         viewModel.sendMessage(message)
     }
 
+    private fun sendImageMessage(imageUrl: String) {
+        Log.d("ChatActivity", "Sending image message: $imageUrl")
+
+        val user = currentUser ?: return
+        val author = Author(user.id, user.nickname ?: "알 수 없음", null)
+
+        val message = ChatMessage(
+            id = System.currentTimeMillis().toString(),
+            text = "",
+            user = author,
+            _imageUrl = imageUrl,
+            createdAt = Date()
+        )
+
+        Log.d("🔍 ChatDebug", "adapter senderId = $senderId") // 직접 senderId를 저장해두었다면
+        Log.d("🔍 ChatDebug", "message sender id = ${message.getUser().getId()}")
+
+        viewModel.sendMessage(message)
+    }
+
+    companion object {
+        const val REQUEST_CAMERA = 1001
+        const val REQUEST_GALLERY = 1002
+    }
 }

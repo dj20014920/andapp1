@@ -21,9 +21,10 @@ class MessageRepository(private val roomCode: String) {
             val messageList = mutableListOf<ChatMessage>()
             for (child in snapshot.children) {
                 child.getValue(ChatMessage::class.java)?.let { message ->
-                    if (message.getText().isNotBlank()) {
+                    if (message.getText().isNotBlank() || message.imageUrl != null) {
                         messageList.add(message)
                     }
+
                 }
             }
             _messages.postValue(messageList)

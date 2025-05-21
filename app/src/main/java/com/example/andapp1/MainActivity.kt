@@ -28,6 +28,7 @@ import android.content.Context
 import android.util.Base64
 
 //todo 다른 사용자가 방을 생성하면 내 채팅창 목록에도 바로 뜨는 거 수정하기 입장하기를 안눌러도 바로뜸
+//todo 채팅방에서 사진 전송 기능 추가 및 참여자 목록 기능 오류 수정, 채팅방 제목 위치 수정, 앱 시작 화면 구성(5/25일까지)
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding

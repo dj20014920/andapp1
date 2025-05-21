@@ -88,7 +88,7 @@ class ChatViewModel(val roomCode: String,
                     id = System.currentTimeMillis().toString(),
                     text = "🗺️ 장소를 공유했어요!\n$mapUrl", // ✅ URL도 텍스트에 포함
                     user = user,
-                    imageUrl = null,
+                    _imageUrl = null,
                     mapUrl = mapUrl,
                     createdAt = Date()
                 )
@@ -97,6 +97,12 @@ class ChatViewModel(val roomCode: String,
             } else {
                 Log.e("ChatViewModel", "❌ 사용자 정보 없음")
             }
+        }
+    }
+
+    fun sendMessage(message: ChatMessage) {
+        viewModelScope.launch {
+            messageRepository.sendMessage(message)
         }
     }
 

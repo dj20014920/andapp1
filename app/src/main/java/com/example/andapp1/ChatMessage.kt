@@ -11,7 +11,7 @@ class ChatMessage(
     private var id: String = "",
     private var text: String = "",
     private var user: Author = Author(),
-    var _imageUrl: String? = null,     // ✅ 추가
+    var imageUrlValue: String? = null,     // ✅ 추가
     private var mapUrl: String? = null,       // ✅ 추가
     @Exclude
     private var createdAt: Date = Date()
@@ -23,8 +23,7 @@ class ChatMessage(
     override fun getText(): String = text
     override fun getUser(): IUser = user
     override fun getCreatedAt(): Date = createdAt
-
-    override fun getImageUrl(): String? = _imageUrl
+    override fun getImageUrl(): String? = imageUrlValue
 
     fun getMapUrl(): String? = mapUrl
     fun setMapUrl(url: String) { this.mapUrl = url }

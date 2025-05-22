@@ -88,7 +88,7 @@ class ChatViewModel(val roomCode: String,
                     id = System.currentTimeMillis().toString(),
                     text = "🗺️ 장소를 공유했어요!\n$mapUrl", // ✅ URL도 텍스트에 포함
                     user = user,
-                    _imageUrl = null,
+                    imageUrlValue= null,
                     mapUrl = mapUrl,
                     createdAt = Date()
                 )

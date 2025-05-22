@@ -34,6 +34,7 @@ import java.io.File
 import android.Manifest
 import android.graphics.BitmapFactory
 import com.bumptech.glide.Glide
+import com.google.firebase.storage.FirebaseStorage
 import com.stfalcon.chatkit.commons.ImageLoader
 import org.opencv.android.OpenCVLoader
 import java.util.Date
@@ -54,17 +55,68 @@ class ChatActivity : AppCompatActivity() {
 
 
     private fun openCamera() {
-        val values = ContentValues().apply {
-            put(MediaStore.Images.Media.TITLE, "New Picture")
-            put(MediaStore.Images.Media.DESCRIPTION, "From Camera")
-        }
-        photoUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)!!
+        // 📌 먼저 필요한 권한 목록
+        val permissions = mutableListOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.READ_MEDIA_IMAGES
+        )
 
-        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-            putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
-        startActivityForResult(cameraIntent, REQUEST_CAMERA)
+
+        // 📌 권한 미허용 항목 추출
+        val denied = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (denied.isNotEmpty()) {
+            // 📌 권한 요청
+            ActivityCompat.requestPermissions(this, denied.toTypedArray(), 1011)
+            return // ⚠️ 아직 권한 없으니까 여기서 중단
+        }
+
+        // ✅ 여기부터는 권한이 모두 허용된 상태
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "photo_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/ChatPhotos")
+            }
+        }
+
+        photoSendUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+        if (photoSendUri == null) {
+            Log.e("PHOTO", "❌ photoSendUri 생성 실패")
+            return
+        }
+
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+            putExtra(MediaStore.EXTRA_OUTPUT, photoSendUri)
+            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        photoSendLauncher.launch(intent)
     }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == 1011) {
+            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                openCamera() // ✅ 권한 허용되면 다시 openCamera 실행
+            } else {
+                Toast.makeText(this, "사진 촬영을 위해 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+
 
     private fun openGallery() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
@@ -337,52 +389,27 @@ class ChatActivity : AppCompatActivity() {
                 .show()
         }
     }
-
-    fun launchPhotoSendCamera() {
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "photo_${System.currentTimeMillis()}.jpg")
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/ChatPhotos")
-            }
-        }
-
-        photoSendUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-
-        if (photoSendUri == null) {
-            Log.e("PHOTO", "❌ URI 생성 실패")
-            return
-        }
-
-        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-            putExtra(MediaStore.EXTRA_OUTPUT, photoSendUri)
-            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-
-        photoSendLauncher.launch(intent)
-    }
-
+    
     private fun uploadImageToFirebase(uri: Uri) {
         val fileName = "images/${System.currentTimeMillis()}.jpg"
-        val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference.child(fileName)
+        val storageRef = FirebaseStorage.getInstance().reference.child(fileName)
+
+        Log.d("PHOTO", "업로드 시도 URI: $uri")
 
         storageRef.putFile(uri)
-            .continueWithTask { task ->
-                if (!task.isSuccessful) {
-                    throw task.exception ?: Exception("이미지 업로드 실패")
+            .addOnSuccessListener {
+                Log.d("PHOTO", "✅ 업로드 성공")
+                storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                    Log.d("PHOTO", "✅ 다운로드 URL: $downloadUrl")
+                    sendImageMessage(downloadUrl.toString()) // 이때 imageUrlValue로 넣어야 함
                 }
-                storageRef.downloadUrl
-            }
-            .addOnSuccessListener { downloadUrl ->
-                Log.d("PHOTO", "✅ Firebase 업로드 성공 → $downloadUrl")
-                sendImageMessage(downloadUrl.toString())
             }
             .addOnFailureListener { e ->
-                Log.e("PHOTO", "❌ Firebase 업로드 실패: ${e.message}")
+                Log.e("PHOTO", "❌ 업로드 실패: ${e.message}")
+                e.printStackTrace()
                 Toast.makeText(this, "사진 업로드 실패", Toast.LENGTH_SHORT).show()
             }
     }
-
 
     private fun sendChatMessage(message: String) {
         viewModel.sendMessage(message)
@@ -398,7 +425,7 @@ class ChatActivity : AppCompatActivity() {
             id = System.currentTimeMillis().toString(),
             text = "",
             user = author,
-            _imageUrl = imageUrl,
+            imageUrlValue = imageUrl,
             createdAt = Date()
         )
 

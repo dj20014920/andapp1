@@ -65,18 +65,18 @@ class ChatActivity : AppCompatActivity() {
             permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
 
-        // 📌 권한 미허용 항목 추출
+        // 권한 미허용 항목 추출
         val denied = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
 
         if (denied.isNotEmpty()) {
-            // 📌 권한 요청
+            // 권한 요청
             ActivityCompat.requestPermissions(this, denied.toTypedArray(), 1011)
             return // ⚠️ 아직 권한 없으니까 여기서 중단
         }
 
-        // ✅ 여기부터는 권한이 모두 허용된 상태
+        // 여기부터는 권한이 모두 허용된 상태
         val contentValues = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, "photo_${System.currentTimeMillis()}.jpg")
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
@@ -109,7 +109,7 @@ class ChatActivity : AppCompatActivity() {
 
         if (requestCode == 1011) {
             if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                openCamera() // ✅ 권한 허용되면 다시 openCamera 실행
+                openCamera() // 권한 허용되면 다시 openCamera 실행
             } else {
                 Toast.makeText(this, "사진 촬영을 위해 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
             }
@@ -206,7 +206,7 @@ class ChatActivity : AppCompatActivity() {
                 REQUEST_GALLERY -> {
                     val selectedImageUri = data?.data
                     if (selectedImageUri != null) {
-                        sendImageMessage(selectedImageUri.toString())
+                        uploadImageToFirebase(selectedImageUri)
                     }
                 }
             }
@@ -235,6 +235,22 @@ class ChatActivity : AppCompatActivity() {
             adapter = MessagesListAdapter<ChatMessage>(senderId, holders, imageLoader)
             binding.messagesList.setAdapter(adapter)
 
+            adapter.setOnMessageClickListener { message ->
+                val imageUrl = message.imageUrlValue
+                if (!imageUrl.isNullOrEmpty()) {
+                    val photoList = viewModel.messages.value
+                        ?.filter { !it.imageUrlValue.isNullOrEmpty() }
+                        ?.map { it.imageUrlValue!! } ?: emptyList()
+
+                    val clickedIndex = photoList.indexOf(imageUrl)
+
+                    val intent = Intent(this@ChatActivity, PhotoViewerActivity::class.java).apply {
+                        putStringArrayListExtra("photoList", ArrayList(photoList))
+                        putExtra("startPosition", clickedIndex)
+                    }
+                    startActivity(intent)
+                }
+            }
 
             binding.customMessageInput.setInputListener { input ->
                 viewModel.sendMessage(input.toString())
@@ -254,7 +270,6 @@ class ChatActivity : AppCompatActivity() {
                     }
                     .show()
             }
-
             observeMessages()
         }
     }

@@ -7,11 +7,13 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -20,49 +22,61 @@ import java.io.FileOutputStream
 
 class ImageViewerActivity : AppCompatActivity() {
 
-    private lateinit var imageUrl: String
-    private lateinit var imageView: ImageView
+    private lateinit var photoList: List<String>
+    private var currentIndex = 0
+    private lateinit var viewPager: ViewPager2
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d("ImageViewerActivity","▶︎ 전달된 extras=${intent.extras}")
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_image_viewer)
 
-        imageUrl = intent.getStringExtra("imageUrl") ?: return
-        imageView = findViewById(R.id.fullImageView)
+        photoList = intent.getStringArrayListExtra("photoList") ?: emptyList()
+        currentIndex = intent.getIntExtra("startPosition", 0)
 
-        Glide.with(this).load(imageUrl).into(imageView)
+        Log.d("ImageViewerActivity", "photoList = $photoList")
+        Log.d("ImageViewerActivity", "startPosition = $currentIndex")
+
+        viewPager = findViewById(R.id.viewPager)
+        viewPager.adapter = PhotoPagerAdapter(photoList)
+        viewPager.setCurrentItem(currentIndex, false)
+
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                currentIndex = position
+            }
+        })
 
         findViewById<Button>(R.id.btnSave).setOnClickListener {
-            downloadAndSaveImage()
+            val url = photoList.getOrNull(currentIndex) ?: return@setOnClickListener
+            downloadAndSaveImage(url)
         }
 
         findViewById<Button>(R.id.btnShare).setOnClickListener {
-            downloadAndShareImage()
+            val url = photoList.getOrNull(currentIndex) ?: return@setOnClickListener
+            downloadAndShareImage(url)
         }
     }
 
-    private fun downloadAndSaveImage() {
+    private fun downloadAndSaveImage(url: String) {
         Glide.with(this)
             .asBitmap()
-            .load(imageUrl)
+            .load(url)
             .into(object : CustomTarget<Bitmap>() {
                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
                     val savedUri = saveToGallery(resource)
-                    if (savedUri != null) {
-                        Toast.makeText(this@ImageViewerActivity, "이미지가 저장되었습니다", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this@ImageViewerActivity, "저장 실패", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(this@ImageViewerActivity, if (savedUri != null) "이미지가 저장되었습니다" else "저장 실패", Toast.LENGTH_SHORT).show()
                 }
 
                 override fun onLoadCleared(placeholder: Drawable?) {}
             })
     }
 
-    private fun downloadAndShareImage() {
+    private fun downloadAndShareImage(url: String) {
         Glide.with(this)
             .asBitmap()
-            .load(imageUrl)
+            .load(url)
             .into(object : CustomTarget<Bitmap>() {
                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
                     val uri = saveToCache(resource)

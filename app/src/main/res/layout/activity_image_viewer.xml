@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
-    <ImageView
-        android:id="@+id/fullImageView"
+    <!-- 1) ViewPager2 -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="fitCenter"/>
+        android:layout_height="match_parent" />
 
+    <!-- 2) 버튼들은 FrameLayout 하단에 올리기 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
+        android:layout_gravity="bottom"
         android:orientation="horizontal"
         android:gravity="center"
         android:background="#80000000"
@@ -30,4 +32,5 @@
             android:text="공유"
             android:layout_marginStart="16dp" />
     </LinearLayout>
-</RelativeLayout>
+
+</FrameLayout>

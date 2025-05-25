@@ -1,27 +1,33 @@
-package com.example.andapp1
-
 import android.content.Intent
+import android.view.View
 import android.widget.ImageView
 import com.bumptech.glide.Glide
-import com.stfalcon.chatkit.commons.models.MessageContentType
+import com.example.andapp1.ChatImageStore
+import com.example.andapp1.ChatMessage
+import com.example.andapp1.ImageViewerActivity
+import com.example.andapp1.R
 import com.stfalcon.chatkit.messages.MessageHolders
-import android.view.View
-
 
 class OutcomingImageMessageViewHolder(itemView: View) :
-    MessageHolders.BaseOutcomingMessageViewHolder<MessageContentType.Image>(itemView) {
+    MessageHolders.BaseOutcomingMessageViewHolder<ChatMessage>(itemView) {
 
-    override fun onBind(message: MessageContentType.Image) {
+    override fun onBind(message: ChatMessage) {
         val imageView = itemView.findViewById<ImageView>(R.id.image)
-        Glide.with(imageView.context).load(message.imageUrl).into(imageView)
-
+        Glide.with(itemView.context).load(message.imageUrlValue).into(imageView)
 
         imageView.setOnClickListener {
-            val context = itemView.context
-            val intent = Intent(context, ImageViewerActivity::class.java).apply {
-                putExtra("imageUrl", message.imageUrl)
+            val url = message.imageUrlValue ?: return@setOnClickListener
+            val allImages = ChatImageStore.imageMessages
+            val idx = allImages.indexOf(url)
+            val photoList = if (idx != -1) ArrayList(allImages) else arrayListOf(url)
+            val position = if (idx != -1) idx else 0
+
+            val intent = Intent(itemView.context, ImageViewerActivity::class.java).apply {
+                putStringArrayListExtra("photoList", photoList)
+                putExtra("startPosition", position)
             }
-            context.startActivity(intent)
+
+            itemView.context.startActivity(intent)
         }
     }
 }

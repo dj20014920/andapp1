@@ -52,7 +52,7 @@ class ChatActivity : AppCompatActivity() {
     private var currentUser: UserEntity? = null
     private lateinit var photoUri: Uri
     private lateinit var senderId: String
-
+    private val imageMessages = mutableListOf<String>()
 
     private fun openCamera() {
         // 📌 먼저 필요한 권한 목록
@@ -115,8 +115,6 @@ class ChatActivity : AppCompatActivity() {
             }
         }
     }
-
-
 
     private fun openGallery() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
@@ -213,13 +211,17 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-
     private fun initializeAdapterAndListeners() {
         lifecycleScope.launch {
-            val user = RoomDatabaseInstance.getInstance(applicationContext).userDao().getUser()
-            currentUser = user // 저장!
-            senderId = currentUser?.id ?: "unknown"
-            Log.d("🔍 ChatDebug", "MessagesListAdapter senderId = $senderId")
+            // 1) DB에서 currentUser 불러오기
+            val user = RoomDatabaseInstance
+                .getInstance(applicationContext)
+                .userDao()
+                .getUser()
+            currentUser = user
+            senderId = user?.id ?: "unknown"
+
+            // 2) holders 만들기 (제네릭 없이)
             val holders = MessageHolders()
                 .setOutcomingImageHolder(
                     OutcomingImageMessageViewHolder::class.java,
@@ -229,53 +231,76 @@ class ChatActivity : AppCompatActivity() {
                     IncomingImageMessageViewHolder::class.java,
                     R.layout.item_incoming_image_message
                 )
-            val imageLoader = ImageLoader { imageView, url, _ ->
-                Glide.with(imageView.context).load(url).into(imageView)
-            }
-            adapter = MessagesListAdapter<ChatMessage>(senderId, holders, imageLoader)
+            // 3) 어댑터 생성
+            adapter = MessagesListAdapter<ChatMessage>(
+                senderId,
+                holders,
+                ImageLoader { imageView, url, _ ->
+                    Glide.with(imageView.context).load(url).into(imageView)
+                }
+            )
+
             binding.messagesList.setAdapter(adapter)
 
+            // 메시지 클릭 (텍스트 메시지용)
             adapter.setOnMessageClickListener { message ->
                 val imageUrl = message.imageUrlValue
+                Log.d("💥클릭된 메시지", "imageUrlValue = $imageUrl")
+
                 if (!imageUrl.isNullOrEmpty()) {
-                    val photoList = viewModel.messages.value
-                        ?.filter { !it.imageUrlValue.isNullOrEmpty() }
-                        ?.map { it.imageUrlValue!! } ?: emptyList()
+                    val urls = imageMessages
+                    val idx = urls.indexOf(imageUrl)
 
-                    val clickedIndex = photoList.indexOf(imageUrl)
-
-                    val intent = Intent(this@ChatActivity, PhotoViewerActivity::class.java).apply {
-                        putStringArrayListExtra("photoList", ArrayList(photoList))
-                        putExtra("startPosition", clickedIndex)
+                    val photoListToSend = if (idx != -1) {
+                        ArrayList(urls)
+                    } else {
+                        arrayListOf(imageUrl)
                     }
+
+                    val position = if (idx != -1) idx else 0
+
+                    Log.d("ChatActivity", "▶︎ 이미지 클릭 → photoList=$photoListToSend, index=$position")
+
+                    val intent = Intent(this@ChatActivity, ImageViewerActivity::class.java)
+                        .putStringArrayListExtra("photoList", photoListToSend)
+                        .putExtra("startPosition", position)
+
                     startActivity(intent)
                 }
             }
 
+
+            // 텍스트 전송 버튼
             binding.customMessageInput.setInputListener { input ->
                 viewModel.sendMessage(input.toString())
-                Handler(Looper.getMainLooper()).postDelayed({ scrollToBottomSmooth() }, 300)
+                scrollToBottomSmooth()
                 true
             }
 
+            // 사진 버튼
             binding.btnSendPhoto.setOnClickListener {
                 val options = arrayOf("사진 촬영", "갤러리에서 선택")
                 AlertDialog.Builder(this@ChatActivity)
                     .setTitle("사진 선택")
                     .setItems(options) { _, which ->
-                        when (which) {
-                            0 -> openCamera()
-                            1 -> openGallery()
-                        }
+                        if (which == 0) openCamera() else openGallery()
                     }
                     .show()
             }
+
+            // 메시지 옵저빙 시작
             observeMessages()
         }
     }
 
     private fun observeMessages() {
         viewModel.messages.observe(this) { messages ->
+            imageMessages.clear()
+            imageMessages.addAll(
+                messages.filter { !it.imageUrlValue.isNullOrEmpty() }
+                    .map { it.imageUrlValue!! }
+            )
+            ChatImageStore.imageMessages = imageMessages // 👈 전역 저장
             adapter.clear()
             adapter.addToEnd(messages.sortedBy { it.createdAt.time }, true)
             binding.messagesList.post {

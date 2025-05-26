@@ -34,6 +34,7 @@ import java.io.File
 import android.Manifest
 import android.graphics.BitmapFactory
 import com.bumptech.glide.Glide
+import com.example.andapp1.DialogHelper.showParticipantsDialog
 import com.google.firebase.storage.FirebaseStorage
 import com.stfalcon.chatkit.commons.ImageLoader
 import org.opencv.android.OpenCVLoader
@@ -221,6 +222,10 @@ class ChatActivity : AppCompatActivity() {
             currentUser = user
             senderId = user?.id ?: "unknown"
 
+            if (user != null) {
+                addParticipantToRoom(viewModel.roomCode, user)
+            }
+
             // 2) holders 만들기 (제네릭 없이)
             val holders = MessageHolders()
                 .setOutcomingImageHolder(
@@ -326,6 +331,10 @@ class ChatActivity : AppCompatActivity() {
                 showOcrChoiceDialog()
                 true
             }
+            R.id.menu_participants -> {
+                showParticipantsDialog(viewModel.roomCode)
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -429,7 +438,51 @@ class ChatActivity : AppCompatActivity() {
                 .show()
         }
     }
-    
+
+    private fun showParticipantsDialog(roomCode: String) {
+        val participantsRef = FirebaseDatabase.getInstance()
+            .getReference("rooms")
+            .child(roomCode)
+            .child("participants")
+
+        participantsRef.get().addOnSuccessListener { snapshot ->
+            val participants = mutableListOf<String>()
+
+            snapshot.children.forEach { child ->
+                val nickname = child.child("nickname").getValue(String::class.java)
+                if (!nickname.isNullOrBlank()) {
+                    participants.add(nickname)
+                }
+            }
+
+            if (participants.isEmpty()) {
+                participants.add("참여자가 없습니다.")
+            }
+
+            AlertDialog.Builder(this)
+                .setTitle("참여자 목록")
+                .setItems(participants.toTypedArray(), null)
+                .setPositiveButton("닫기", null)
+                .show()
+
+        }.addOnFailureListener { e ->
+            Toast.makeText(this, "참여자 목록을 불러오지 못했습니다.", Toast.LENGTH_SHORT).show()
+            Log.e("ParticipantsDialog", "❌ 참여자 불러오기 실패: ${e.message}")
+        }
+    }
+
+    private fun addParticipantToRoom(roomCode: String, user: UserEntity) {
+        val ref = FirebaseDatabase.getInstance()
+            .getReference("rooms")
+            .child(roomCode)
+            .child("participants")
+            .child(user.id)
+
+        val participantData = mapOf("nickname" to (user.nickname ?: "알 수 없음"))
+        ref.setValue(participantData)
+    }
+
+
     private fun uploadImageToFirebase(uri: Uri) {
         val fileName = "images/${System.currentTimeMillis()}.jpg"
         val storageRef = FirebaseStorage.getInstance().reference.child(fileName)

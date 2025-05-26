@@ -32,6 +32,9 @@ import com.stfalcon.chatkit.messages.*
 import kotlinx.coroutines.launch
 import java.io.File
 import android.Manifest
+import android.R.attr.bitmap
+import android.R.attr.data
+import android.R.id.message
 import android.graphics.BitmapFactory
 import com.bumptech.glide.Glide
 import com.example.andapp1.DialogHelper.showParticipantsDialog
@@ -182,6 +185,8 @@ class ChatActivity : AppCompatActivity() {
         binding = ActivityChatBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        handleSharedMapLink(intent)
+
         val roomCode = intent.getStringExtra("roomCode") ?: "default_room"
         val roomName = intent.getStringExtra("roomName") ?: "채팅방"
         setSupportActionBar(binding.toolbar)
@@ -192,6 +197,87 @@ class ChatActivity : AppCompatActivity() {
         layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         binding.messagesList.layoutManager = layoutManager
         initializeAdapterAndListeners()
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        Log.d("ChatActivity", "🌐 onNewIntent 호출됨") // 추가
+        intent?.getStringExtra("mapUrl")?.let { url ->
+            Log.d("ChatActivity", "🌐 받은 지도 URL: $url") // 추가
+            lastMapUrl = url
+            showMapRestoreButton()
+        }
+    }
+
+    private fun showMapRestoreButton() {
+        val rootView = findViewById<ViewGroup>(android.R.id.content)
+
+        // ✅ 중복 방지: 이미 있는 경우 추가 X
+        val existing = rootView.findViewWithTag<FloatingActionButton>("map_restore_button")
+        if (existing != null) {
+            Log.d("ChatActivity", "🧭 이미 플로팅 버튼 존재 - 중복 생성 방지")
+            return
+        }
+
+        val fab = FloatingActionButton(this).apply {
+            tag = "map_restore_button" // ✅ 중복 방지용 태그
+
+            setImageResource(R.drawable.ic_map)
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.END
+                marginEnd = 32
+                topMargin = 100
+            }
+
+            val dragKey = R.id.view_tag_drag_info
+
+            setOnTouchListener { view, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        view.setTag(dragKey, Triple(event.rawX, event.rawY, false))
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val (startX, startY, _) = view.getTag(dragKey) as Triple<Float, Float, Boolean>
+                        val dx = event.rawX - startX
+                        val dy = event.rawY - startY
+                        val isDragged = dx * dx + dy * dy > 100
+                        if (isDragged) {
+                            view.x += dx
+                            view.y += dy
+                            view.setTag(dragKey, Triple(event.rawX, event.rawY, true))
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        val (_, _, isDragged) = view.getTag(dragKey) as Triple<Float, Float, Boolean>
+                        if (!isDragged) {
+                            lastMapUrl?.let { url ->
+                                val intent = Intent(this@ChatActivity, MapActivity::class.java)
+                                intent.putExtra("mapUrl", url)
+                                startActivity(intent)
+                            }
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }
+        rootView.addView(fab)
+    }
+
+    private fun handleSharedMapLink(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_SEND && intent.type == "text/plain") {
+            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+            if (!sharedText.isNullOrBlank()) {
+                Log.d("MapShare", "공유받은 지도 링크: $sharedText")
+                sendChatMessage("📍 공유된 지도 링크: $sharedText")
+            }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -332,7 +418,20 @@ class ChatActivity : AppCompatActivity() {
                 true
             }
             R.id.menu_participants -> {
-                showParticipantsDialog(viewModel.roomCode)
+                // 참여자 목록 다이얼로그 띄우기
+                DialogHelper.showParticipantsDialog(this, viewModel.roomCode)
+                true
+            }
+            R.id.menu_open_map -> {
+                // ✅ 지도 액티비티로 이동
+                val intent = Intent(this, MapActivity::class.java)
+                intent.putExtra("roomCode", viewModel.roomCode) // 채팅방 코드 넘기기 (필요 시)
+                startActivity(intent)
+                return true
+            }
+            R.id.menu_scrap_list -> {
+                // 스크랩 목록 다이얼로그 띄우기 (또는 액티비티 이동)
+                ScrapDialogHelper.showScrapListDialog(this, viewModel.roomCode)
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -439,38 +538,6 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun showParticipantsDialog(roomCode: String) {
-        val participantsRef = FirebaseDatabase.getInstance()
-            .getReference("rooms")
-            .child(roomCode)
-            .child("participants")
-
-        participantsRef.get().addOnSuccessListener { snapshot ->
-            val participants = mutableListOf<String>()
-
-            snapshot.children.forEach { child ->
-                val nickname = child.child("nickname").getValue(String::class.java)
-                if (!nickname.isNullOrBlank()) {
-                    participants.add(nickname)
-                }
-            }
-
-            if (participants.isEmpty()) {
-                participants.add("참여자가 없습니다.")
-            }
-
-            AlertDialog.Builder(this)
-                .setTitle("참여자 목록")
-                .setItems(participants.toTypedArray(), null)
-                .setPositiveButton("닫기", null)
-                .show()
-
-        }.addOnFailureListener { e ->
-            Toast.makeText(this, "참여자 목록을 불러오지 못했습니다.", Toast.LENGTH_SHORT).show()
-            Log.e("ParticipantsDialog", "❌ 참여자 불러오기 실패: ${e.message}")
-        }
-    }
-
     private fun addParticipantToRoom(roomCode: String, user: UserEntity) {
         val ref = FirebaseDatabase.getInstance()
             .getReference("rooms")
@@ -481,7 +548,6 @@ class ChatActivity : AppCompatActivity() {
         val participantData = mapOf("nickname" to (user.nickname ?: "알 수 없음"))
         ref.setValue(participantData)
     }
-
 
     private fun uploadImageToFirebase(uri: Uri) {
         val fileName = "images/${System.currentTimeMillis()}.jpg"

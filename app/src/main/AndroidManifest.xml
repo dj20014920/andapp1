@@ -27,7 +27,16 @@
         <activity android:name=".ChatActivity"
             android:theme="@style/Theme.Chat.Default"
             android:launchMode="singleTop"
-            android:exported="false" />
+            android:exported="true">
+
+            <!-- 공유 인텐트 수신 -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
 
         <!-- 카카오톡 -->
         <meta-data

@@ -209,8 +209,9 @@ class ChatActivity : AppCompatActivity() {
             showMapRestoreButton()
         }
 
-        intent?.getStringExtra("scrapText")?.let { text ->
-            sendChatMessage(text)
+        intent?.getStringExtra("scrapText")?.let { sharedMapUrl ->
+            Log.d("ChatActivity", "📩 공유 메시지 전송: $sharedMapUrl")
+            viewModel.sendMapUrlMessage(sharedMapUrl)
         }
     }
 
@@ -318,22 +319,36 @@ class ChatActivity : AppCompatActivity() {
                 .userDao()
                 .getUser()
             currentUser = user
+
+            if (user == null) {
+                Toast.makeText(this@ChatActivity, "⚠ 사용자 정보를 불러오지 못했습니다.", Toast.LENGTH_SHORT).show()
+                finish()
+                return@launch
+            }
+
             senderId = user?.id ?: "unknown"
 
-            if (user != null) {
-                val participantsRef = FirebaseDatabase.getInstance()
-                    .getReference("rooms")
-                    .child(viewModel.roomCode)
-                    .child("participants")
-                    .child(user.id)
+            if (user == null) {
+                Toast.makeText(this@ChatActivity, "⚠ 사용자 정보를 불러올 수 없습니다.", Toast.LENGTH_SHORT).show()
+                finish()
+                return@launch
+            }
 
-                participantsRef.get().addOnSuccessListener { snapshot ->
-                    if (!snapshot.exists()) {
-                    } else {
-                        Log.d("ChatActivity", "이미 참가자 목록에 존재함 → 등록 생략")
-                    }
+            val participantsRef = FirebaseDatabase.getInstance()
+                .getReference("rooms")
+                .child(viewModel.roomCode)
+                .child("participants")
+                .child(user.id)
+
+            participantsRef.get().addOnSuccessListener { snapshot ->
+                if (!snapshot.exists()) {
+                    Toast.makeText(this@ChatActivity, "⚠ 이미 나간 채팅방입니다.", Toast.LENGTH_SHORT).show()
+                    finish() // 🚫 채팅방 입장 금지
+                } else {
+                    Log.d("ChatActivity", "✅ 참가자 확인 완료")
                 }
             }
+
             // 2) holders 만들기 (제네릭 없이)
             val holders = MessageHolders()
                 .setOutcomingImageHolder(
@@ -558,17 +573,6 @@ class ChatActivity : AppCompatActivity() {
                 .setNegativeButton("취소", null)
                 .show()
         }
-    }
-
-    private fun addParticipantToRoom(roomCode: String, user: UserEntity) {
-        val ref = FirebaseDatabase.getInstance()
-            .getReference("rooms")
-            .child(roomCode)
-            .child("participants")
-            .child(user.id)
-
-        val participantData = mapOf("nickname" to (user.nickname ?: "알 수 없음"))
-        ref.setValue(participantData)
     }
 
     private fun uploadImageToFirebase(uri: Uri) {

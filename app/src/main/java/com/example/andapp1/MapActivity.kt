@@ -26,6 +26,7 @@ class MapActivity : AppCompatActivity() {
     private var menuVisible = false
     private var menuView: View? = null
     private lateinit var fabToggle: FloatingActionButton
+    private var lastLoadedUrl: String? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,7 +48,13 @@ class MapActivity : AppCompatActivity() {
                     return true
                 }
             }
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    lastLoadedUrl = url
+                    Log.d("MapActivity", "✅ 마지막 로딩된 URL: $url")
+                }
+            }
             loadUrl(targetUrl)
         }
 
@@ -181,17 +188,20 @@ class MapActivity : AppCompatActivity() {
     }
 
     private fun returnToChat() {
+        val url = binding.webView.url ?: return  // 마지막으로 본 지도 URL
         val intent = Intent(this, ChatActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT) // 웹뷰 상태 유지
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra("mapUrl", url)  // 공유 버튼처럼 지도 URL 전달
         }
         startActivity(intent)
     }
 
     private fun shareCurrentMapToChat() {
-        val url = binding.webView.url ?: return
+        val url = lastLoadedUrl ?: return
         val intent = Intent(this, ChatActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            putExtra("mapUrl", url) // ✅ 지도 URL 전달
+            putExtra("mapUrl", url) // 지도 URL 전달
+            putExtra("scrapText", url) // 추가: 메시지로 전송할 URL
         }
         startActivity(intent)
     }

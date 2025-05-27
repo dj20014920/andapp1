@@ -27,8 +27,6 @@ class RoomActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val user = RoomDatabaseInstance.getInstance(applicationContext).userDao().getUser()
             currentUserId = user?.id ?: return@launch
-
-            // 2. 어댑터 초기화
             // 2. 어댑터 초기화
             adapter = RoomAdapter(
                 rooms,

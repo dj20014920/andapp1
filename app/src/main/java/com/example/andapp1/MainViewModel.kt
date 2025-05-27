@@ -1,132 +1,182 @@
-//MainViewModel.kt
-package com.example.andapp1 // ✅ 완료
+package com.example.andapp1
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
-import com.example.andapp1.FirebaseRoomManager
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import android.content.Context
+
+// MainViewModel.kt
 class MainViewModel(
-    val roomRepository: RoomRepository,
+    private val repository: RoomRepository,
     private val context: Context
 ) : ViewModel() {
+
+    private var currentUserId: String? = null
+
     private val _rooms = MutableLiveData<List<Room>>()
-    val rooms: LiveData<List<Room>> get() = _rooms
-    private val userDao = RoomDatabaseInstance.getInstance(context).userDao()
-    fun generateRoomLink(code: String): String {
-        return "https://example.com/room?code=$code"
-    }
+    val rooms: LiveData<List<Room>> = _rooms
 
-    fun isRoomCode(input: String): Boolean {
-        val regex = Regex("^[A-Z0-9]{3}-[A-Z0-9]{3}$")
-        return regex.matches(input.trim().uppercase())
-    }
-
-    fun isRoomLink(input: String): Boolean {
-        return input.startsWith("http") && input.contains("code=")
-    }
-
-    fun extractRoomCodeFromLink(link: String): String? {
-        return Regex("code=([A-Z0-9]{3}-[A-Z0-9]{3})")
-            .find(link)
-            ?.groupValues
-            ?.getOrNull(1)
-    }
+    private var favoriteRoomCodes = setOf<String>()
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
-            val user = RoomDatabaseInstance.getInstance(context).userDao().getUser()
-            val userId = user?.id ?: return@launch
+        loadFavoriteRoomCodes()
+    }
 
-            FirebaseRoomManager.getRooms(userId) { roomsFromFirebase ->
-                viewModelScope.launch(Dispatchers.IO) {
-                    Log.d("MainViewModel", "✅ getRooms(userId=$userId) 호출됨")
-                    val favoriteCodes = roomRepository.getFavoriteRoomCodes()
-                    val merged = roomsFromFirebase.map {
-                        it.copy(isFavorite = favoriteCodes.contains(it.roomCode))
-                    }
-                    _rooms.postValue(merged)
+    fun setCurrentUserId(userId: String) {
+        currentUserId = userId
+    }
+
+    private fun loadFavoriteRoomCodes() {
+        viewModelScope.launch {
+            favoriteRoomCodes = repository.getFavoriteRoomCodes().toSet()
+        }
+    }
+
+    fun loadRooms(userId: String) {
+        FirebaseRoomManager.getRooms(userId) { roomsList ->
+            viewModelScope.launch {
+                // 즐겨찾기 상태 동기화
+                val roomsWithFavorites = roomsList.map { room ->
+                    room.copy(isFavorite = favoriteRoomCodes.contains(room.roomCode))
                 }
+                _rooms.postValue(roomsWithFavorites)
             }
         }
+    }
+
+    fun updateRoomsList(roomsList: List<Room>) {
+        viewModelScope.launch {
+            // 즐겨찾기 상태 동기화
+            val roomsWithFavorites = roomsList.map { room ->
+                room.copy(isFavorite = favoriteRoomCodes.contains(room.roomCode))
+            }
+            _rooms.postValue(roomsWithFavorites)
+        }
+    }
+
+    fun checkFavoriteStatus(room: Room) {
+        room.isFavorite = favoriteRoomCodes.contains(room.roomCode)
+    }
+
+    fun createRoomWithParticipant(room: Room, userId: String) {
+        // Firebase에 방 생성
+        FirebaseRoomManager.createRoom(room)
+        // 생성자를 참여자로 추가
+        FirebaseRoomManager.addParticipant(room.roomCode, userId)
     }
 
     fun addRoom(room: Room) {
-        // Firebase에 먼저 방 저장
-        FirebaseRoomManager.createRoom(room)
-
-        // 로컬 RoomDB에 즐겨찾기 여부 저장
-        viewModelScope.launch {
-            val roomEntity = RoomEntity(
-                roomCode = room.roomCode,
-                roomTitle = room.roomTitle,
-                lastActivityTime = room.lastActivityTime,
-                isFavorite = room.isFavorite
-            )
-            roomRepository.insertFavoriteRoom(roomEntity)
+        currentUserId?.let { userId ->
+            // Firebase에 참여자 추가
+            FirebaseRoomManager.addParticipant(room.roomCode, userId)
         }
     }
 
-    fun changeRoomName(roomCode: String, newName: String) {
-        viewModelScope.launch {
-            val user = withContext(Dispatchers.IO) {
-                RoomDatabaseInstance.getInstance(context).userDao().getUser()
-            }
+    fun changeRoomName(roomCode: String, newName: String, author: Author) {
+        FirebaseRoomManager.updateRoomName(roomCode, newName, author)
 
-            if (user != null) {
-                val author = Author(user.id, user.nickname ?: "알 수 없음")
-                FirebaseRoomManager.updateRoomName(roomCode, newName, author) // ✅ 함수명 주의!
-            } else {
-                Log.e("MainViewModel", "❌ 로컬에 저장된 사용자 정보가 없습니다. 이름 변경 불가.")
-            }
+        // 로컬 DB도 업데이트
+        viewModelScope.launch {
+            repository.updateRoomTitle(roomCode, newName)
         }
     }
-    fun leaveRoom(roomCode: String) {
+
+    fun leaveRoom(roomCode: String, userId: String) {
         viewModelScope.launch {
-            val user = withContext(Dispatchers.IO) {
-                RoomDatabaseInstance.getInstance(context).userDao().getUser()
-            }
-
-            if (user != null) {
-                val author = Author(user.id, user.nickname ?: "알 수 없음")
-
-                // ❌ Firebase 참여자 제거는 생략 (기록 유지 목적)
-                // ✅ 시스템 메시지 전송
+            try {
+                // 1. 나가기 메시지 전송
+                val prefs = context.getSharedPreferences("login", Context.MODE_PRIVATE)
+                val nickname = prefs.getString("nickname", "Unknown") ?: "Unknown"
+                val author = Author(userId, nickname)
                 FirebaseRoomManager.sendLeaveMessage(roomCode, author)
 
-                // ✅ RoomDB에서만 제거 (로컬 기록 삭제)
-                roomRepository.deleteRoomByCode(roomCode)
+                // 2. Firebase에서 참여자 제거
+                FirebaseRoomManager.removeParticipant(roomCode, userId)
 
-                // ✅ UI에서 제거
-                val updatedRooms = _rooms.value?.filterNot { it.roomCode == roomCode } ?: emptyList()
-                _rooms.postValue(updatedRooms)
+                // 3. 로컬 즐겨찾기에서도 제거
+                repository.deleteRoomByCode(roomCode)
 
-                Log.d("MainViewModel", "✅ ${author.name}님이 채팅방에서 나갔습니다. (로컬 기준)")
-            } else {
-                Log.e("MainViewModel", "❌ 사용자 정보를 불러오지 못했습니다. 나가기 실패.")
+                // 4. 즐겨찾기 목록 갱신
+                loadFavoriteRoomCodes()
+
+                // 5. UI 즉시 업데이트
+                val currentRooms = _rooms.value?.toMutableList() ?: mutableListOf()
+                currentRooms.removeAll { it.roomCode == roomCode }
+                _rooms.postValue(currentRooms)
+
+                Log.d("MainViewModel", "✅ 채팅방 나가기 완료: $roomCode")
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "❌ 채팅방 나가기 실패", e)
             }
         }
     }
-    fun updateLastActivityTime(code: String, time: String) {
-        FirebaseRoomManager.updateLastActivityTime(code, time)
-    }
 
-    // Room - 즐겨찾기 저장
-    fun insertFavoriteRoom(roomEntity: RoomEntity) {
+    fun updateLastActivityTime(roomCode: String, newTime: String) {
+        FirebaseRoomManager.updateLastActivityTime(roomCode, newTime)
+
         viewModelScope.launch {
-            roomRepository.insertFavoriteRoom(roomEntity)
+            repository.updateLastActivityTime(roomCode, newTime)
         }
     }
 
-    // Room - 즐겨찾기 제거
-    fun deleteFavoriteRoom(roomEntity: RoomEntity) {
+    fun insertFavoriteRoom(room: RoomEntity) {
         viewModelScope.launch {
-            roomRepository.deleteFavoriteRoom(roomEntity)
+            repository.insertFavoriteRoom(room)
+            favoriteRoomCodes = favoriteRoomCodes + room.roomCode
+
+            // UI 즉시 업데이트
+            val currentRooms = _rooms.value?.map {
+                if (it.roomCode == room.roomCode) {
+                    it.copy(isFavorite = true)
+                } else it
+            }
+            currentRooms?.let { _rooms.postValue(it) }
+        }
+    }
+
+    fun deleteFavoriteRoom(room: RoomEntity) {
+        viewModelScope.launch {
+            repository.deleteFavoriteRoom(room)
+            favoriteRoomCodes = favoriteRoomCodes - room.roomCode
+
+            // UI 즉시 업데이트
+            val currentRooms = _rooms.value?.map {
+                if (it.roomCode == room.roomCode) {
+                    it.copy(isFavorite = false)
+                } else it
+            }
+            currentRooms?.let { _rooms.postValue(it) }
+        }
+    }
+
+    fun generateRoomLink(roomCode: String): String {
+        return "https://andapp1.com/join?code=$roomCode"
+    }
+
+    fun isRoomCode(input: String): Boolean {
+        return input.matches(Regex("[A-Z0-9]{3}-[A-Z0-9]{3}"))
+    }
+
+    fun isRoomLink(input: String): Boolean {
+        return input.startsWith("https://andapp1.com/join?code=")
+    }
+
+    fun extractRoomCodeFromLink(link: String): String? {
+        return try {
+            val uri = android.net.Uri.parse(link)
+            uri.getQueryParameter("code")?.uppercase()
+        } catch (e: Exception) {
+            null
         }
     }
 }

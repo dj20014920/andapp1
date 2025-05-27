@@ -201,18 +201,23 @@ class ChatActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        Log.d("ChatActivity", "🌐 onNewIntent 호출됨") // 추가
+        Log.d("ChatActivity", "🌐 onNewIntent 호출됨")
+
         intent?.getStringExtra("mapUrl")?.let { url ->
-            Log.d("ChatActivity", "🌐 받은 지도 URL: $url") // 추가
+            Log.d("ChatActivity", "🌐 받은 지도 URL: $url")
             lastMapUrl = url
             showMapRestoreButton()
+        }
+
+        intent?.getStringExtra("scrapText")?.let { text ->
+            sendChatMessage(text)
         }
     }
 
     private fun showMapRestoreButton() {
         val rootView = findViewById<ViewGroup>(android.R.id.content)
 
-        // ✅ 중복 방지: 이미 있는 경우 추가 X
+        // 중복 방지: 이미 있는 경우 추가 X
         val existing = rootView.findViewWithTag<FloatingActionButton>("map_restore_button")
         if (existing != null) {
             Log.d("ChatActivity", "🧭 이미 플로팅 버튼 존재 - 중복 생성 방지")
@@ -223,6 +228,10 @@ class ChatActivity : AppCompatActivity() {
             tag = "map_restore_button" // ✅ 중복 방지용 태그
 
             setImageResource(R.drawable.ic_map)
+
+            backgroundTintList = ContextCompat.getColorStateList(context, android.R.color.white)
+            imageTintList = ContextCompat.getColorStateList(context, android.R.color.black)
+
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -256,10 +265,13 @@ class ChatActivity : AppCompatActivity() {
                         val (_, _, isDragged) = view.getTag(dragKey) as Triple<Float, Float, Boolean>
                         if (!isDragged) {
                             lastMapUrl?.let { url ->
-                                val intent = Intent(this@ChatActivity, MapActivity::class.java)
-                                intent.putExtra("mapUrl", url)
+                                val intent = Intent(this@ChatActivity, MapActivity::class.java).apply {
+                                    putExtra("mapUrl", url)
+                                    addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                                }
                                 startActivity(intent)
                             }
+
                         }
                         true
                     }
@@ -309,9 +321,19 @@ class ChatActivity : AppCompatActivity() {
             senderId = user?.id ?: "unknown"
 
             if (user != null) {
-                addParticipantToRoom(viewModel.roomCode, user)
-            }
+                val participantsRef = FirebaseDatabase.getInstance()
+                    .getReference("rooms")
+                    .child(viewModel.roomCode)
+                    .child("participants")
+                    .child(user.id)
 
+                participantsRef.get().addOnSuccessListener { snapshot ->
+                    if (!snapshot.exists()) {
+                    } else {
+                        Log.d("ChatActivity", "이미 참가자 목록에 존재함 → 등록 생략")
+                    }
+                }
+            }
             // 2) holders 만들기 (제네릭 없이)
             val holders = MessageHolders()
                 .setOutcomingImageHolder(

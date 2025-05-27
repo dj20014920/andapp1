@@ -7,6 +7,13 @@
     android:orientation="vertical"
     android:padding="24dp">
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewRooms"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="채팅방 목록"/>
+
+
     <TextView
         android:id="@+id/roomCodeTextView"
         android:layout_width="wrap_content"

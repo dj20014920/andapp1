@@ -15,6 +15,7 @@ class MessageRepository(private val roomCode: String) {
 
     private val _messages = MutableLiveData<List<ChatMessage>>()
     val messages: LiveData<List<ChatMessage>> = _messages
+    private var lastMessageSnapshot: List<ChatMessage> = emptyList()
 
     private val messageListener = object : ValueEventListener {
         override fun onDataChange(snapshot: DataSnapshot) {
@@ -24,10 +25,18 @@ class MessageRepository(private val roomCode: String) {
                     if (message.getText().isNotBlank() || message.imageUrl != null) {
                         messageList.add(message)
                     }
-
                 }
             }
-            _messages.postValue(messageList)
+
+            val sortedMessages = messageList.sortedBy { it.createdAt.time }  // ✅ 정렬 핵심
+
+            if (!isSameMessageList(lastMessageSnapshot, sortedMessages)) {
+                lastMessageSnapshot = sortedMessages
+                _messages.postValue(sortedMessages)
+                Log.d("MessageRepository", "✅ LiveData 갱신됨 → size = ${sortedMessages.size}")
+            } else {
+                Log.d("MessageRepository", "⚠ 중복 메시지 무시됨 (LiveData 발행 안 함)")
+            }
         }
 
         override fun onCancelled(error: DatabaseError) {
@@ -40,9 +49,7 @@ class MessageRepository(private val roomCode: String) {
             override fun onDataChange(snapshot: DataSnapshot) {
                 Log.d("MessageRepo", "방 존재 여부: ${snapshot.exists()}")
                 if (!snapshot.exists()) {
-                    // 메시지를 전혀 보내지 않도록 초기화 제거
                     Log.d("MessageRepo", "초기화 생략됨 (불필요한 빈 메시지 방지)")
-                    // ⚠ 삭제: messagesRef.setValue(mapOf<String, Any>())
                 }
             }
             override fun onCancelled(error: DatabaseError) {
@@ -55,11 +62,19 @@ class MessageRepository(private val roomCode: String) {
 
     fun sendMessage(message: ChatMessage) {
         val messageId = messagesRef.push().key ?: UUID.randomUUID().toString()
+        message.messageId = messageId
         messagesRef.child(messageId).setValue(message)
         Log.d("MessageRepository", "✅ Firebase 저장 완료: ${message.text}")
     }
 
     fun cleanup() {
         messagesRef.removeEventListener(messageListener)
+    }
+    private fun isSameMessageList(
+        list1: List<ChatMessage>,
+        list2: List<ChatMessage>
+    ): Boolean {
+        if (list1.size != list2.size) return false
+        return list1.zip(list2).all { (a, b) -> a.id == b.id }
     }
 }

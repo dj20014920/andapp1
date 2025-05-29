@@ -42,7 +42,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.stfalcon.chatkit.commons.ImageLoader
 import org.opencv.android.OpenCVLoader
 import java.util.Date
-
+import androidx.lifecycle.Observer
 
 class ChatActivity : AppCompatActivity() {
 
@@ -57,6 +57,9 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var photoUri: Uri
     private lateinit var senderId: String
     private val imageMessages = mutableListOf<String>()
+    private var messagesObserver: Observer<List<ChatMessage>>? = null
+    private var lastMessageId: String? = null
+    private var shownMessageIds = mutableSetOf<String>()
 
     private fun openCamera() {
         // 📌 먼저 필요한 권한 목록
@@ -194,7 +197,11 @@ class ChatActivity : AppCompatActivity() {
 
         viewModel = ViewModelProvider(this, ChatViewModelFactory(roomCode, applicationContext))[ChatViewModel::class.java]
 
-        layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
+        layoutManager = LinearLayoutManager(this).apply {
+            stackFromEnd = true // 가장 아래부터 시작
+            reverseLayout = false // 최신 메시지를 아래쪽에 표시
+        }
+        Log.d("정렬확인", "reverseLayout = ${layoutManager.reverseLayout}, stackFromEnd = ${layoutManager.stackFromEnd}")
         binding.messagesList.layoutManager = layoutManager
         initializeAdapterAndListeners()
     }
@@ -208,10 +215,18 @@ class ChatActivity : AppCompatActivity() {
             lastMapUrl = url
             showMapRestoreButton()
         }
-
         intent?.getStringExtra("scrapText")?.let { sharedMapUrl ->
-            Log.d("ChatActivity", "📩 공유 메시지 전송: $sharedMapUrl")
-            viewModel.sendMapUrlMessage(sharedMapUrl)
+            // ✅ 중복 전송 방지를 위한 검사
+            val alreadySent = intent.getBooleanExtra("alreadySent", false)
+            if (!alreadySent) {
+                Log.d("ChatActivity", "📩 공유 메시지 전송: $sharedMapUrl")
+                viewModel.sendMapUrlMessage(sharedMapUrl)
+
+                // ✅ 재진입 시 중복 방지 위해 플래그 추가
+                intent.putExtra("alreadySent", true)
+            } else {
+                Log.d("ChatActivity", "⚠ 이미 전송된 메시지라 무시")
+            }
         }
     }
 
@@ -371,7 +386,7 @@ class ChatActivity : AppCompatActivity() {
             binding.messagesList.setAdapter(adapter)
 
             // 메시지 클릭 (텍스트 메시지용)
-            adapter.setOnMessageClickListener { message ->
+            adapter.setOnMessageClickListener { message: ChatMessage ->
                 val imageUrl = message.imageUrlValue
                 Log.d("💥클릭된 메시지", "imageUrlValue = $imageUrl")
 
@@ -397,11 +412,14 @@ class ChatActivity : AppCompatActivity() {
                 }
             }
 
-
             // 텍스트 전송 버튼
             binding.customMessageInput.setInputListener { input ->
                 viewModel.sendMessage(input.toString())
-                scrollToBottomSmooth()
+
+                // 🔽 메시지 전송 후 자동 스크롤 추가
+                binding.messagesList.post {
+                    layoutManager.scrollToPositionWithOffset(adapter.itemCount - 1, 0)
+                }
                 true
             }
 
@@ -415,7 +433,6 @@ class ChatActivity : AppCompatActivity() {
                     }
                     .show()
             }
-
             // 메시지 옵저빙 시작
             observeMessages()
         }
@@ -423,19 +440,19 @@ class ChatActivity : AppCompatActivity() {
 
     private fun observeMessages() {
         viewModel.messages.observe(this) { messages ->
-            imageMessages.clear()
-            imageMessages.addAll(
-                messages.filter { !it.imageUrlValue.isNullOrEmpty() }
-                    .map { it.imageUrlValue!! }
-            )
-            ChatImageStore.imageMessages = imageMessages // 👈 전역 저장
-            adapter.clear()
-            adapter.addToEnd(messages.sortedBy { it.createdAt.time }, true)
+            val sorted = messages
+                .filter { it.messageId.isNotBlank() }
+                .distinctBy { it.messageId }
+                .sortedBy { it.createdAt.time }
+                .reversed() // ✅ 최신이 아래로 오도록 보장
+            adapter.setItems(sorted)
+
             binding.messagesList.post {
-                binding.messagesList.scrollToPosition(adapter.itemCount)
+                layoutManager.scrollToPositionWithOffset(adapter.itemCount - 1, 0)
             }
         }
     }
+
 
     private fun scrollToBottomSmooth() {
         binding.messagesList.postDelayed({
@@ -607,7 +624,7 @@ class ChatActivity : AppCompatActivity() {
         val author = Author(user.id, user.nickname ?: "알 수 없음", null)
 
         val message = ChatMessage(
-            id = System.currentTimeMillis().toString(),
+            messageId = "",
             text = "",
             user = author,
             imageUrlValue = imageUrl,

@@ -41,7 +41,7 @@ class ChatViewModel(val roomCode: String,
                 )
 
                 val message = ChatMessage(
-                    id = System.currentTimeMillis().toString(),
+                    messageId = "",
                     text = content,
                     user = user,
                     createdAt = Date()
@@ -57,7 +57,7 @@ class ChatViewModel(val roomCode: String,
     fun sendSystemMessage(text: String) {
         viewModelScope.launch {
             val message = ChatMessage(
-                id = System.currentTimeMillis().toString(),
+                messageId = "",
                 text = text,
                 user = Author(
                     id = "system",
@@ -85,7 +85,7 @@ class ChatViewModel(val roomCode: String,
                 )
 
                 val message = ChatMessage(
-                    id = System.currentTimeMillis().toString(),
+                    messageId = "",
                     text = "🗺️ 장소를 공유했어요!\n$mapUrl", // ✅ URL도 텍스트에 포함
                     user = user,
                     imageUrlValue= null,

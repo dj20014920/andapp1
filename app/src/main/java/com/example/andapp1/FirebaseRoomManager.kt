@@ -1,5 +1,6 @@
 package com.example.andapp1
 
+import android.R.attr.author
 import android.util.Log
 import android.content.Context
 import com.google.firebase.database.*
@@ -91,7 +92,7 @@ object FirebaseRoomManager {
 
             // 시스템 메시지 전송
             val message = ChatMessage(
-                id = System.currentTimeMillis().toString(),
+                messageId = "",
                 text = "⚙️ ${sender.name}님이 채팅방 이름을 '${oldName}'에서 '${newName}'으로 변경했습니다.",
                 user = sender,
                 createdAt = Date()
@@ -169,7 +170,7 @@ object FirebaseRoomManager {
     // ✅ 나가기 메시지 전송
     fun sendLeaveMessage(roomCode: String, author: Author) {
         val message = ChatMessage(
-            id = System.currentTimeMillis().toString(),
+            messageId = "",
             text = "👋 ${author.name}님이 채팅방을 나갔습니다.",
             user = author,
             createdAt = Date()

@@ -364,8 +364,18 @@ class ChatActivity : AppCompatActivity() {
                 }
             }
 
-            // 2) holders 만들기 (제네릭 없이)
+
             val holders = MessageHolders()
+                // 📝 텍스트 메시지용 커스텀 홀더 (URL 클릭 처리)
+                .setIncomingTextHolder(
+                    TextMessageViewHolder::class.java,
+                    com.stfalcon.chatkit.R.layout.item_incoming_text_message // chatkit 기본 레이아웃 사용
+                )
+                .setOutcomingTextHolder(
+                    TextMessageViewHolder::class.java,
+                    com.stfalcon.chatkit.R.layout.item_outcoming_text_message // chatkit 기본 레이아웃 사용
+                )
+                // 📸 이미지 메시지용 홀더
                 .setOutcomingImageHolder(
                     OutcomingImageMessageViewHolder::class.java,
                     R.layout.item_outcoming_image_message
@@ -383,6 +393,7 @@ class ChatActivity : AppCompatActivity() {
                 }
             )
 
+
             binding.messagesList.setAdapter(adapter)
 
             // 메시지 클릭 (텍스트 메시지용)
@@ -390,6 +401,7 @@ class ChatActivity : AppCompatActivity() {
                 val imageUrl = message.imageUrlValue
                 Log.d("💥클릭된 메시지", "imageUrlValue = $imageUrl")
 
+                // 📸 이미지 메시지만 처리 (텍스트 메시지는 TextMessageViewHolder에서 처리)
                 if (!imageUrl.isNullOrEmpty()) {
                     val urls = imageMessages
                     val idx = urls.indexOf(imageUrl)

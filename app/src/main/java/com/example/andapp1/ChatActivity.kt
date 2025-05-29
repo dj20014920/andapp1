@@ -447,6 +447,13 @@ class ChatActivity : AppCompatActivity() {
                 .reversed() // ✅ 최신이 아래로 오도록 보장
             adapter.setItems(sorted)
 
+            imageMessages.clear()
+            imageMessages.addAll(
+                messages.filter { !it.imageUrlValue.isNullOrEmpty() }
+                    .map { it.imageUrlValue!! }
+            )
+            ChatImageStore.imageMessages = imageMessages // 👈 전역 저장
+
             binding.messagesList.post {
                 layoutManager.scrollToPositionWithOffset(adapter.itemCount - 1, 0)
             }

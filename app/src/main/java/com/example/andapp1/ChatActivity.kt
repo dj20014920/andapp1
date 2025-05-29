@@ -495,6 +495,15 @@ class ChatActivity : AppCompatActivity() {
                 ScrapDialogHelper.showScrapListDialog(this, viewModel.roomCode)
                 true
             }
+            //  사진첩 메뉴
+            R.id.menu_photo_gallery -> {
+                val intent = Intent(this, PhotoGalleryActivity::class.java).apply {
+                    putExtra("roomCode", viewModel.roomCode)
+                    putExtra("roomName", supportActionBar?.title?.toString() ?: "채팅방")
+                }
+                startActivity(intent)
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }

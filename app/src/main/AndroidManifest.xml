@@ -89,6 +89,10 @@
         <activity android:name=".MapActivity" />
         <activity android:name=".ImageViewerActivity" />
         <activity android:name=".PhotoViewerActivity" />
+        <activity
+            android:name=".PhotoGalleryActivity"
+            android:exported="false"
+            android:parentActivityName=".ChatActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

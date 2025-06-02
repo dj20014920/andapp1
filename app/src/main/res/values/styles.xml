@@ -13,6 +13,67 @@
         <item name="android:navigationBarColor">#FFFFFF</item>
         <item name="android:fitsSystemWindows">true</item>
     </style>
+
+    <!-- 툴바 제목 스타일 -->
+    <style name="ToolbarTitle" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
+
+    <!-- 웰컴 타이틀 스타일 -->
+    <style name="WelcomeTitle" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:letterSpacing">0.01</item>
+    </style>
+
+    <!-- 서브타이틀 스타일 -->
+    <style name="Subtitle" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">16sp</item>
+        <item name="android:alpha">0.8</item>
+    </style>
+
+    <!-- 카드 제목 스타일 -->
+    <style name="CardTitle" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <!-- 카드 설명 스타일 -->
+    <style name="CardDescription" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textSize">14sp</item>
+        <item name="android:alpha">0.7</item>
+    </style>
+
+    <!-- 섹션 헤더 스타일 -->
+    <style name="SectionHeader" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <!-- 둥근 모서리 카드 스타일 -->
+    <style name="RoundedCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">8dp</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <!-- 기본 버튼 스타일 -->
+    <style name="PrimaryButton" parent="Widget.Material3.Button.UnelevatedButton">
+        <item name="cornerRadius">12dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">56dp</item>
+    </style>
+
+    <!-- 보조 버튼 스타일 -->
+    <style name="SecondaryButton" parent="Widget.Material3.Button.TonalButton">
+        <item name="cornerRadius">12dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">56dp</item>
+    </style>
     <!-- ChatKit 메시지 리스트 스타일 -->
     <style name="ChatKitMessagesListStyle">
         <item name="chat_bubbleStyle">rounded</item>

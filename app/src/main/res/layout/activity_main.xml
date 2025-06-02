@@ -7,43 +7,143 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:paddingTop="?attr/actionBarSize"
+    android:background="@drawable/background_gradient"
+    android:padding="24dp"
     tools:context=".MainActivity">
 
-    <!-- 코드 또는 링크 입력 -->
-    <EditText
-        android:id="@+id/enterCodeOrLinkEditText"
+    <!-- 웰컴 헤더 -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginRight="16dp"
-        android:hint="코드 또는 링크 입력"
-        android:minHeight="48dp" />
+        android:orientation="vertical"
+        android:layout_marginBottom="32dp"
+        android:gravity="center">
 
-    <!-- 입장하기 버튼 -->
-    <Button
-        android:id="@+id/enterButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:text="입장하기" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="환영합니다! 👋"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:layout_marginBottom="8dp" />
 
-    <!-- 방 생성하기 버튼 -->
-    <Button
-        android:id="@+id/createRoomButton"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="채팅방에 참여하거나 새로 만들어보세요"
+            android:textSize="16sp"
+            android:textColor="@android:color/white"
+            android:alpha="0.8" />
+
+    </LinearLayout>
+
+    <!-- 입장 섹션 -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:text="방 생성하기" />
+        android:orientation="vertical"
+        android:background="@drawable/card_background"
+        android:padding="24dp"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🚪 채팅방 입장"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/on_surface"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 기본 EditText 사용 -->
+        <EditText
+            android:id="@+id/enterCodeOrLinkEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:hint="코드 또는 링크를 입력하세요"
+            android:inputType="text"
+            android:textSize="16sp"
+            android:padding="16dp"
+            android:background="@drawable/edittext_background"
+            android:minHeight="56dp" />
+
+        <!-- 기본 Button 사용 -->
+        <Button
+            android:id="@+id/enterButton"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="입장하기"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="@drawable/button_primary_background"
+            android:textColor="@android:color/white" />
+
+    </LinearLayout>
+
+    <!-- 생성 섹션 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/card_background"
+        android:padding="24dp"
+        android:layout_marginBottom="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="➕ 새 채팅방 만들기"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/on_surface"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="친구들과 새로운 채팅방을 만들어보세요! 🎉"
+            android:textSize="14sp"
+            android:textColor="@color/on_surface_variant"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/createRoomButton"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="방 생성하기"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="@drawable/button_secondary_background"
+            android:textColor="#0066B3" />
+
+    </LinearLayout>
+
+    <!-- 채팅방 목록 헤더 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="💬 참여 중인 채팅방"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="16dp" />
 
     <!-- 채팅방 리스트 -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/roomsRecyclerView"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:layout_margin="16dp"
-        android:clipToPadding="false"
-        android:paddingBottom="16dp"
-        android:visibility="visible"/>
+        android:background="@drawable/card_background"
+        android:padding="8dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/roomsRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp" />
+
+    </LinearLayout>
+
 </LinearLayout>

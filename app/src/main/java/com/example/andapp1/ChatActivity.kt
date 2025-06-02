@@ -124,7 +124,9 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun openGallery() {
-        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.type = "image/*"
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
         startActivityForResult(intent, REQUEST_GALLERY)
     }
 
@@ -317,9 +319,19 @@ class ChatActivity : AppCompatActivity() {
                     sendImageMessage(photoUri.toString())
                 }
                 REQUEST_GALLERY -> {
-                    val selectedImageUri = data?.data
-                    if (selectedImageUri != null) {
-                        uploadImageToFirebase(selectedImageUri)
+                    // 여러 장 선택했을 때
+                    val clipData = data?.clipData
+                    if (clipData != null) {
+                        for (i in 0 until clipData.itemCount) {
+                            val imageUri = clipData.getItemAt(i).uri
+                            uploadImageToFirebase(imageUri)
+                        }
+                    } else {
+                        // 한 장만 선택한 경우
+                        val selectedImageUri = data?.data
+                        if (selectedImageUri != null) {
+                            uploadImageToFirebase(selectedImageUri)
+                        }
                     }
                 }
             }

@@ -649,7 +649,11 @@ class ChatActivity : AppCompatActivity() {
         Log.d("ChatActivity", "Sending image message: $imageUrl")
 
         val user = currentUser ?: return
-        val author = Author(user.id, user.nickname ?: "알 수 없음", null)
+        val author = Author(
+            user.id,
+            user.nickname ?: "알 수 없음",
+            user.profileImageUrl // ✅ 프로필 이미지 URL 설정
+        )
 
         val message = ChatMessage(
             messageId = "",
@@ -659,7 +663,7 @@ class ChatActivity : AppCompatActivity() {
             createdAt = Date()
         )
 
-        Log.d("🔍 ChatDebug", "adapter senderId = $senderId") // 직접 senderId를 저장해두었다면
+        Log.d("🔍 ChatDebug", "adapter senderId = $senderId")
         Log.d("🔍 ChatDebug", "message sender id = ${message.getUser().getId()}")
 
         viewModel.sendMessage(message)

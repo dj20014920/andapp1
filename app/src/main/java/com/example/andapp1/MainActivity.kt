@@ -221,16 +221,35 @@ class MainActivity : AppCompatActivity() {
             val input = binding.enterCodeOrLinkEditText.text.toString().trim().uppercase()
             val currentRooms = viewModel.rooms.value ?: emptyList()
 
+            // ✅ 디버깅 로그 추가
+            Log.d("RoomJoin", "=== 채팅방 입장 디버깅 ===")
+            Log.d("RoomJoin", "입력값: '$input'")
+            Log.d("RoomJoin", "입력값 길이: ${input.length}")
+            Log.d("RoomJoin", "isRoomCode 결과: ${viewModel.isRoomCode(input)}")
+            Log.d("RoomJoin", "isRoomLink 결과: ${viewModel.isRoomLink(input)}")
+
             if (currentRooms.size >= MAX_ROOMS) {
                 Toast.makeText(this, "최대 채팅방 개수(5개)를 초과했습니다.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             val roomCode = when {
-                viewModel.isRoomCode(input) -> input
-                viewModel.isRoomLink(input) -> viewModel.extractRoomCodeFromLink(input)
-                else -> null
+                viewModel.isRoomCode(input) -> {
+                    Log.d("RoomJoin", "✅ 코드로 인식됨: $input")
+                    input
+                }
+                viewModel.isRoomLink(input) -> {
+                    val extracted = viewModel.extractRoomCodeFromLink(input)
+                    Log.d("RoomJoin", "✅ 링크에서 추출된 코드: $extracted")
+                    extracted
+                }
+                else -> {
+                    Log.d("RoomJoin", "❌ 코드/링크 인식 실패")
+                    null
+                }
             }
+
+            Log.d("RoomJoin", "최종 roomCode: $roomCode")
 
             if (roomCode == null) {
                 Toast.makeText(this, "올바른 코드 또는 링크를 입력해주세요.", Toast.LENGTH_SHORT).show()
@@ -244,6 +263,7 @@ class MainActivity : AppCompatActivity() {
 
             // Firebase에서 방 정보 확인 후 입장
             FirebaseRoomManager.roomsRef.child(roomCode).get().addOnSuccessListener { snapshot ->
+                Log.d("RoomJoin", "Firebase 조회 결과 - 방 존재: ${snapshot.exists()}")
                 if (snapshot.exists()) {
                     val room = snapshot.getValue(Room::class.java)
                     room?.let {
@@ -257,7 +277,8 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     Toast.makeText(this, "존재하지 않는 채팅방입니다.", Toast.LENGTH_SHORT).show()
                 }
-            }.addOnFailureListener {
+            }.addOnFailureListener { error ->
+                Log.e("RoomJoin", "Firebase 오류: ${error.message}")
                 Toast.makeText(this, "채팅방 확인에 실패했습니다.", Toast.LENGTH_SHORT).show()
             }
         }

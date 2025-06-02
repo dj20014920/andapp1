@@ -163,8 +163,10 @@ class MainViewModel(
         return "https://andapp1.com/join?code=$roomCode"
     }
 
+    // ✅ 두 가지 형식 모두 허용하도록 수정
     fun isRoomCode(input: String): Boolean {
-        return input.matches(Regex("[A-Z0-9]{3}-[A-Z0-9]{3}"))
+        return input.matches(Regex("[A-Z0-9]{3}-[A-Z0-9]{3}")) ||  // ABC-123 형식
+                input.matches(Regex("[A-Z0-9]{6}"))                 // ABC123 형식
     }
 
     fun isRoomLink(input: String): Boolean {

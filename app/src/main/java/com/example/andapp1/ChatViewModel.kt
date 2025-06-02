@@ -37,7 +37,7 @@ class ChatViewModel(val roomCode: String,
                 val user = Author(
                     id = currentUser.id,
                     name = currentUser.nickname ?: "알 수 없음",
-                    avatar = null
+                    avatar = currentUser.profileImageUrl // ✅ 프로필 이미지 URL 설정
                 )
 
                 val message = ChatMessage(
@@ -81,7 +81,7 @@ class ChatViewModel(val roomCode: String,
                 val user = Author(
                     id = currentUser.id,
                     name = currentUser.nickname ?: "알 수 없음",
-                    avatar = null
+                    avatar = currentUser.profileImageUrl // ✅ 프로필 이미지 URL 설정
                 )
 
                 val message = ChatMessage(

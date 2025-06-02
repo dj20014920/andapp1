@@ -20,6 +20,9 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 
 class MainActivity : AppCompatActivity() {
 
@@ -54,6 +57,9 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(binding.root)
 
+        // 🎨 버튼 색상 강제 설정
+        setupButtonColors()
+
         // Firebase에 사용자 정보 저장
         currentUserId?.let {
             checkAndSaveUserInfo(it, nickname, email)
@@ -67,6 +73,36 @@ class MainActivity : AppCompatActivity() {
 
         // 디버깅용 해시키 출력
         getHashKey(this)
+    }
+
+    private fun setupButtonColors() {
+        // 입장하기 버튼 - 그라디언트 배경
+        val primaryGradient = GradientDrawable().apply {
+            colors = intArrayOf(
+                Color.parseColor("#4facfe"),
+                Color.parseColor("#00c9ff"),
+                Color.parseColor("#0093E9")
+            )
+            orientation = GradientDrawable.Orientation.TL_BR
+            cornerRadius = 12f * resources.displayMetrics.density
+        }
+        binding.enterButton.background = primaryGradient
+        binding.enterButton.setTextColor(Color.WHITE)
+
+        // 방 생성하기 버튼 - 입장하기 버튼과 완전히 동일하게
+        val secondaryGradient = GradientDrawable().apply {
+            colors = intArrayOf(
+                Color.parseColor("#4facfe"),
+                Color.parseColor("#00c9ff"),
+                Color.parseColor("#0093E9")
+            )
+            orientation = GradientDrawable.Orientation.TL_BR
+            cornerRadius = 12f * resources.displayMetrics.density
+        }
+        binding.createRoomButton.background = secondaryGradient
+        binding.createRoomButton.setTextColor(Color.WHITE)
+
+        Log.d("MainActivity", "✅ 버튼 색상 강제 설정 완료 - 두 버튼 동일한 색상")
     }
 
     private fun setupViewModel(userId: String) {
@@ -333,5 +369,8 @@ class MainActivity : AppCompatActivity() {
         currentUserId?.let { userId ->
             viewModel.loadRooms(userId)
         }
+
+        // 🎨 화면 복귀 시에도 버튼 색상 재설정
+        setupButtonColors()
     }
 }

@@ -68,8 +68,9 @@
             android:exported="true">
         </activity>
 
+        <!-- ✅ MainActivity 테마를 Theme.AndApp1로 변경 -->
         <activity android:name=".MainActivity"
-            android:theme="@style/Theme.Chat.NoActionBar.Transparent"
+            android:theme="@style/Theme.AndApp1"
             android:exported="true">
             <intent-filter android:label="room link">
                 <action android:name="android.intent.action.VIEW" />

@@ -16,13 +16,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginBottom="32dp"
         android:gravity="center">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="환영합니다! 👋"
+            android:text="Travel Maker"
             android:textSize="28sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
@@ -31,10 +30,11 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="채팅방에 참여하거나 새로 만들어보세요"
+            android:text="친구들과 함께 떠나는 즐거운 여행"
             android:textSize="16sp"
             android:textColor="@android:color/white"
-            android:alpha="0.8" />
+            android:alpha="0.8"
+            android:layout_marginBottom="32dp" />
 
     </LinearLayout>
 
@@ -56,7 +56,6 @@
             android:textColor="@color/on_surface"
             android:layout_marginBottom="16dp" />
 
-        <!-- 기본 EditText 사용 -->
         <EditText
             android:id="@+id/enterCodeOrLinkEditText"
             android:layout_width="match_parent"
@@ -69,16 +68,14 @@
             android:background="@drawable/edittext_background"
             android:minHeight="56dp" />
 
-        <!-- 기본 Button 사용 -->
+        <!-- 입장하기 버튼 - 코드에서 색상 설정 -->
         <Button
             android:id="@+id/enterButton"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="입장하기"
             android:textSize="16sp"
-            android:textStyle="bold"
-            android:background="@drawable/button_primary_background"
-            android:textColor="@android:color/white" />
+            android:textStyle="bold" />
 
     </LinearLayout>
 
@@ -108,15 +105,14 @@
             android:textColor="@color/on_surface_variant"
             android:layout_marginBottom="16dp" />
 
+        <!-- 방 생성하기 버튼 - 코드에서 색상 설정 -->
         <Button
             android:id="@+id/createRoomButton"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="방 생성하기"
             android:textSize="16sp"
-            android:textStyle="bold"
-            android:background="@drawable/button_secondary_background"
-            android:textColor="#0066B3" />
+            android:textStyle="bold" />
 
     </LinearLayout>
 

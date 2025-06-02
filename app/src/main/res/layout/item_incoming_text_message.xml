@@ -12,10 +12,24 @@
         android:id="@+id/messageUserAvatar"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:layout_alignParentBottom="true"
+        android:layout_alignParentTop="true"
         android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"
         android:scaleType="centerCrop" />
+
+    <!-- ✅ 사용자 이름 TextView 추가 -->
+    <TextView
+        android:id="@+id/messageUserName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toEndOf="@+id/messageUserAvatar"
+        android:layout_toRightOf="@+id/messageUserAvatar"
+        android:layout_alignTop="@+id/messageUserAvatar"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp"
+        android:text="사용자 이름" />
 
     <com.google.android.flexbox.FlexboxLayout
         android:id="@+id/bubble"
@@ -25,6 +39,7 @@
         android:layout_marginRight="@dimen/message_incoming_bubble_margin_right"
         android:layout_toEndOf="@+id/messageUserAvatar"
         android:layout_toRightOf="@+id/messageUserAvatar"
+        android:layout_below="@+id/messageUserName"
         android:descendantFocusability="blocksDescendants"
         android:orientation="vertical"
         android:background="@drawable/chatkit_incoming_bubble"

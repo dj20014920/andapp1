@@ -37,6 +37,7 @@ import android.R.attr.bitmap
 import android.R.attr.data
 import android.R.id.message
 import android.graphics.BitmapFactory
+import android.widget.TextView
 import com.bumptech.glide.Glide
 import com.example.andapp1.DialogHelper.showParticipantsDialog
 import com.google.firebase.storage.FirebaseStorage
@@ -44,7 +45,9 @@ import com.stfalcon.chatkit.commons.ImageLoader
 import org.opencv.android.OpenCVLoader
 import java.util.Date
 import androidx.lifecycle.Observer
-
+import android.content.Context
+import android.view.LayoutInflater
+import android.view.Gravity
 class ChatActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityChatBinding
@@ -713,14 +716,12 @@ class ChatActivity : AppCompatActivity() {
         const val REQUEST_GALLERY = 1002
     }
 }
-
-// ✅ 커스텀 ViewHolder 클래스들
 class CustomIncomingTextViewHolder(itemView: View) : MessageHolders.IncomingTextMessageViewHolder<ChatMessage>(itemView) {
 
     override fun onBind(message: ChatMessage) {
         super.onBind(message)
 
-        // 강제로 프로필 이미지 로드
+        // 프로필 이미지 설정
         val avatarView = itemView.findViewById<ImageView>(R.id.messageUserAvatar)
         val avatarUrl = message.getUser().getAvatar()
 
@@ -735,6 +736,98 @@ class CustomIncomingTextViewHolder(itemView: View) : MessageHolders.IncomingText
         } else {
             avatarView.setImageResource(R.drawable.ic_launcher_background) // 기본 이미지
         }
+
+        // ✅ 사용자 이름 설정
+        val userNameView = itemView.findViewById<TextView>(R.id.messageUserName)
+        val userName = message.getUser().getName()
+        userNameView.text = if (userName.isNotEmpty()) userName else "알 수 없음"
+
+        Log.d("CustomViewHolder", "사용자 이름 설정: $userName")
+
+        // ✅ 프로필 이미지 클릭 이벤트 추가 (사용자 상세 보기)
+        avatarView.setOnClickListener {
+            showUserDetailDialog(itemView.context, message.getUser())
+        }
+
+        // ✅ 사용자 이름 클릭 이벤트 추가
+        userNameView.setOnClickListener {
+            showUserDetailDialog(itemView.context, message.getUser())
+        }
+    }
+
+    private fun showUserDetailDialog(context: Context, user: com.stfalcon.chatkit.commons.models.IUser) {
+        // ✅ 커스텀 레이아웃 생성
+        val dialogView = LayoutInflater.from(context).inflate(android.R.layout.select_dialog_item, null)
+
+        // LinearLayout을 수동으로 생성하여 이미지와 텍스트를 표시
+        val linearLayout = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(40, 40, 40, 40)
+        }
+
+        // 프로필 이미지 추가
+        val profileImageView = ImageView(context).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(300, 300).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                bottomMargin = 20
+            }
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            // 둥근 모서리 배경 설정
+            background = ContextCompat.getDrawable(context, android.R.drawable.dialog_frame)
+        }
+
+        // 사용자 정보 텍스트 (ID 제거)
+        val userInfoText = TextView(context).apply {
+            text = "${user.getName()}"
+            textSize = 18f
+            gravity = Gravity.CENTER
+            setPadding(0, 20, 0, 0)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+
+        // 레이아웃에 뷰들 추가
+        linearLayout.addView(profileImageView)
+        linearLayout.addView(userInfoText)
+
+        // 이미지 로드
+        if (!user.getAvatar().isNullOrEmpty()) {
+            Log.d("UserDialog", "프로필 이미지 로드: ${user.getAvatar()}")
+            Glide.with(context)
+                .load(user.getAvatar())
+                .centerCrop()
+                .error(R.drawable.ic_launcher_background)
+                .into(profileImageView)
+        } else {
+            profileImageView.setImageResource(R.drawable.ic_launcher_background)
+        }
+
+        // 다이얼로그 생성
+        val dialog = AlertDialog.Builder(context)
+            .setTitle("👤 사용자 정보")
+            .setView(linearLayout)
+            .setPositiveButton("확인", null)
+            .setNeutralButton("프로필 크게 보기") { _, _ ->
+                // 프로필 이미지를 전체화면으로 보기
+                showFullScreenImage(context, user.getAvatar())
+            }
+            .create()
+
+        dialog.show()
+    }
+
+    private fun showFullScreenImage(context: Context, imageUrl: String?) {
+        if (imageUrl.isNullOrEmpty()) {
+            Toast.makeText(context, "프로필 이미지가 없습니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 전체화면 이미지 뷰어를 위한 간단한 액티비티 호출
+        // 또는 ImageViewerActivity 재활용
+        val intent = Intent(context, ImageViewerActivity::class.java).apply {
+            putStringArrayListExtra("photoList", arrayListOf(imageUrl))
+            putExtra("startPosition", 0)
+        }
+        context.startActivity(intent)
     }
 }
 
@@ -743,7 +836,7 @@ class CustomIncomingImageViewHolder(itemView: View) : MessageHolders.IncomingIma
     override fun onBind(message: ChatMessage) {
         super.onBind(message)
 
-        // 강제로 프로필 이미지 로드
+        // 프로필 이미지 설정
         val avatarView = itemView.findViewById<ImageView>(R.id.messageUserAvatar)
         val avatarUrl = message.getUser().getAvatar()
 
@@ -758,5 +851,111 @@ class CustomIncomingImageViewHolder(itemView: View) : MessageHolders.IncomingIma
         } else {
             avatarView.setImageResource(R.drawable.ic_launcher_background) // 기본 이미지
         }
+
+        // ✅ 사용자 이름 설정
+        val userNameView = itemView.findViewById<TextView>(R.id.messageUserName)
+        val userName = message.getUser().getName()
+        userNameView.text = if (userName.isNotEmpty()) userName else "알 수 없음"
+
+        Log.d("CustomViewHolder", "사용자 이름 설정: $userName")
+
+        // ✅ 프로필 이미지 클릭 이벤트 추가 (사용자 상세 보기)
+        avatarView.setOnClickListener {
+            showUserDetailDialog(itemView.context, message.getUser())
+        }
+
+        // ✅ 사용자 이름 클릭 이벤트 추가
+        userNameView.setOnClickListener {
+            showUserDetailDialog(itemView.context, message.getUser())
+        }
+
+        // ✅ 기존 이미지 클릭 기능 유지 (이미지 확대 보기)
+        val imageView = itemView.findViewById<ImageView>(R.id.image)
+        imageView.setOnClickListener {
+            val url = message.imageUrlValue ?: return@setOnClickListener
+            val allImages = ChatImageStore.imageMessages
+            val idx = allImages.indexOf(url)
+            val photoList = if (idx != -1) ArrayList(allImages) else arrayListOf(url)
+            val position = if (idx != -1) idx else 0
+
+            val intent = Intent(itemView.context, ImageViewerActivity::class.java).apply {
+                putStringArrayListExtra("photoList", photoList)
+                putExtra("startPosition", position)
+            }
+
+            itemView.context.startActivity(intent)
+        }
+    }
+
+    private fun showUserDetailDialog(context: Context, user: com.stfalcon.chatkit.commons.models.IUser) {
+        // ✅ 커스텀 레이아웃 생성
+        val linearLayout = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(40, 40, 40, 40)
+        }
+
+        // 프로필 이미지 추가
+        val profileImageView = ImageView(context).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(300, 300).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                bottomMargin = 20
+            }
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            // 둥근 모서리 배경 설정
+            background = ContextCompat.getDrawable(context, android.R.drawable.dialog_frame)
+        }
+
+        // 사용자 정보 텍스트 (ID 제거)
+        val userInfoText = TextView(context).apply {
+            text = "${user.getName()}"
+            textSize = 18f
+            gravity = Gravity.CENTER
+            setPadding(0, 20, 0, 0)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+
+        // 레이아웃에 뷰들 추가
+        linearLayout.addView(profileImageView)
+        linearLayout.addView(userInfoText)
+
+        // 이미지 로드
+        if (!user.getAvatar().isNullOrEmpty()) {
+            Log.d("UserDialog", "프로필 이미지 로드: ${user.getAvatar()}")
+            Glide.with(context)
+                .load(user.getAvatar())
+                .centerCrop()
+                .error(R.drawable.ic_launcher_background)
+                .into(profileImageView)
+        } else {
+            profileImageView.setImageResource(R.drawable.ic_launcher_background)
+        }
+
+        // 다이얼로그 생성
+        val dialog = AlertDialog.Builder(context)
+            .setTitle("👤 사용자 정보")
+            .setView(linearLayout)
+            .setPositiveButton("확인", null)
+            .setNeutralButton("프로필 크게 보기") { _, _ ->
+                // 프로필 이미지를 전체화면으로 보기
+                showFullScreenImage(context, user.getAvatar())
+            }
+            .create()
+
+        dialog.show()
+    }
+
+    private fun showFullScreenImage(context: Context, imageUrl: String?) {
+        if (imageUrl.isNullOrEmpty()) {
+            Toast.makeText(context, "프로필 이미지가 없습니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 전체화면 이미지 뷰어를 위한 간단한 액티비티 호출
+        // 또는 ImageViewerActivity 재활용
+        val intent = Intent(context, ImageViewerActivity::class.java).apply {
+            putStringArrayListExtra("photoList", arrayListOf(imageUrl))
+            putExtra("startPosition", 0)
+        }
+        context.startActivity(intent)
     }
 }

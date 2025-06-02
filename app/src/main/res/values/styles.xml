@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" >
 
-    <!-- 🔄 기존 스타일 - 채팅 상하단바 흰색으로 수정 -->
+    <!-- 🎨 채팅 테마 - 상하단바 흰색 -->
     <style name="Theme.Chat.Default" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- 상태바를 흰색으로 설정 -->
         <item name="android:statusBarColor">@android:color/white</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- 내비게이션바를 흰색으로 설정 (API 27+ 조건부 적용) -->
         <item name="android:navigationBarColor">@android:color/white</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="o">true</item>
+
+        <!-- 윈도우 배경을 흰색으로 -->
         <item name="android:windowBackground">@android:color/white</item>
 
-        <!-- 바다색 테마 색상 추가 -->
+        <!-- 바다색 테마 색상 유지 -->
         <item name="colorPrimary">@color/primary_color</item>
         <item name="colorPrimaryVariant">@color/primary_variant</item>
         <item name="colorSecondary">@color/secondary_color</item>
@@ -18,18 +22,21 @@
 
     <style name="Theme.Chat.NoActionBar.Transparent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">#FFFFFF</item>
         <item name="android:fitsSystemWindows">true</item>
 
-        <!-- 바다색 테마 색상 추가 -->
+        <!-- 🔹 바다색 테마 색상 추가 -->
         <item name="colorPrimary">@color/primary_color</item>
         <item name="colorPrimaryVariant">@color/primary_variant</item>
         <item name="colorSecondary">@color/secondary_color</item>
         <item name="colorSecondaryVariant">@color/secondary_variant</item>
+
+        <!-- 🔹 버튼 색상 강제 설정 -->
+        <item name="materialButtonStyle">@style/CustomButtonStyle</item>
     </style>
 
-    <!-- 기존 스타일들 유지 -->
+    <!-- 기존 스타일들... -->
     <style name="ToolbarTitle" parent="TextAppearance.Material3.HeadlineSmall">
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">20sp</item>
@@ -82,14 +89,12 @@
         <item name="android:minHeight">56dp</item>
     </style>
 
-    <!-- 🆕 새로 추가된 스타일 -->
     <style name="CustomButtonStyle" parent="Widget.MaterialComponents.Button">
         <item name="cornerRadius">12dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="backgroundTint">@null</item>
     </style>
 
-    <!-- 🎨 ChatKit 메시지 리스트 스타일 업데이트 -->
     <style name="ChatKitMessagesListStyle">
         <item name="chat_bubbleStyle">rounded</item>
         <item name="chat_textColor">#000000</item>
@@ -104,7 +109,6 @@
         <item name="incomingAvatarHeight">40dp</item>
     </style>
 
-    <!-- 기존 스타일들 유지 -->
     <style name="DefaultMessagesListStyle">
         <item name="android:background">#FFFFFF</item>
     </style>

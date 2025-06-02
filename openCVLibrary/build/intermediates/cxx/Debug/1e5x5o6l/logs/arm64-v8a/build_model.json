@@ -27,7 +27,10 @@
     "variantName": "debug",
     "isDebuggableEnabled": true,
     "validAbiList": [
-      "arm64-v8a"
+      "armeabi-v7a",
+      "arm64-v8a",
+      "x86",
+      "x86_64"
     ],
     "buildTargetSet": [
       "opencv_jni_shared"
@@ -144,7 +147,6 @@
         "rootBuildGradleFolder": "/Users/dj20014920/Desktop/AndApp1",
         "sdkFolder": "/Users/dj20014920/Library/Android/sdk",
         "isBuildOnlyTargetAbiEnabled": true,
-        "ideBuildTargetAbi": "arm64-v8a",
         "isCmakeBuildCohabitationEnabled": false,
         "isPrefabEnabled": false
       },

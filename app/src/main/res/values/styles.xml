@@ -1,65 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" >
 
+    <!-- 🔄 기존 스타일 - 채팅 상하단바 흰색으로 수정 -->
     <style name="Theme.Chat.Default" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:backgroundDimEnabled">false</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/white</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:navigationBarColor">@android:color/white</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o">true</item>
+        <item name="android:windowBackground">@android:color/white</item>
+
+        <!-- 바다색 테마 색상 추가 -->
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorPrimaryVariant">@color/primary_variant</item>
+        <item name="colorSecondary">@color/secondary_color</item>
+        <item name="colorSecondaryVariant">@color/secondary_variant</item>
     </style>
+
     <style name="Theme.Chat.NoActionBar.Transparent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
         <item name="android:navigationBarColor">#FFFFFF</item>
         <item name="android:fitsSystemWindows">true</item>
+
+        <!-- 바다색 테마 색상 추가 -->
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorPrimaryVariant">@color/primary_variant</item>
+        <item name="colorSecondary">@color/secondary_color</item>
+        <item name="colorSecondaryVariant">@color/secondary_variant</item>
     </style>
 
-    <!-- 툴바 제목 스타일 -->
+    <!-- 기존 스타일들 유지 -->
     <style name="ToolbarTitle" parent="TextAppearance.Material3.HeadlineSmall">
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">20sp</item>
         <item name="android:letterSpacing">0.02</item>
     </style>
 
-    <!-- 웰컴 타이틀 스타일 -->
     <style name="WelcomeTitle" parent="TextAppearance.Material3.HeadlineMedium">
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">28sp</item>
         <item name="android:letterSpacing">0.01</item>
     </style>
 
-    <!-- 서브타이틀 스타일 -->
     <style name="Subtitle" parent="TextAppearance.Material3.BodyLarge">
         <item name="android:textSize">16sp</item>
         <item name="android:alpha">0.8</item>
     </style>
 
-    <!-- 카드 제목 스타일 -->
     <style name="CardTitle" parent="TextAppearance.Material3.TitleMedium">
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">18sp</item>
     </style>
 
-    <!-- 카드 설명 스타일 -->
     <style name="CardDescription" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:textSize">14sp</item>
         <item name="android:alpha">0.7</item>
     </style>
 
-    <!-- 섹션 헤더 스타일 -->
     <style name="SectionHeader" parent="TextAppearance.Material3.TitleMedium">
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">18sp</item>
     </style>
 
-    <!-- 둥근 모서리 카드 스타일 -->
     <style name="RoundedCard" parent="Widget.Material3.CardView.Elevated">
         <item name="cardCornerRadius">16dp</item>
         <item name="cardElevation">8dp</item>
         <item name="strokeWidth">0dp</item>
     </style>
 
-    <!-- 기본 버튼 스타일 -->
     <style name="PrimaryButton" parent="Widget.Material3.Button.UnelevatedButton">
         <item name="cornerRadius">12dp</item>
         <item name="android:textSize">16sp</item>
@@ -67,70 +75,72 @@
         <item name="android:minHeight">56dp</item>
     </style>
 
-    <!-- 보조 버튼 스타일 -->
     <style name="SecondaryButton" parent="Widget.Material3.Button.TonalButton">
         <item name="cornerRadius">12dp</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">56dp</item>
     </style>
-    <!-- ChatKit 메시지 리스트 스타일 -->
+
+    <!-- 🆕 새로 추가된 스타일 -->
+    <style name="CustomButtonStyle" parent="Widget.MaterialComponents.Button">
+        <item name="cornerRadius">12dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="backgroundTint">@null</item>
+    </style>
+
+    <!-- 🎨 ChatKit 메시지 리스트 스타일 업데이트 -->
     <style name="ChatKitMessagesListStyle">
         <item name="chat_bubbleStyle">rounded</item>
         <item name="chat_textColor">#000000</item>
         <item name="chat_textSize">16sp</item>
 
-        <item name="incomingTextColor">#000000</item>
+        <item name="incomingTextColor">#1A1A1A</item>
         <item name="outcomingTextColor">#FFFFFF</item>
         <item name="incomingBubbleDrawable">@drawable/chatkit_incoming_bubble</item>
         <item name="outcomingBubbleDrawable">@drawable/chatkit_outcoming_bubble</item>
+
+        <item name="incomingAvatarWidth">40dp</item>
+        <item name="incomingAvatarHeight">40dp</item>
     </style>
 
-    <!-- 기본 메시지 리스트 배경 -->
+    <!-- 기존 스타일들 유지 -->
     <style name="DefaultMessagesListStyle">
         <item name="android:background">#FFFFFF</item>
     </style>
 
-    <!-- 채팅 테마 -->
     <style name="ChatTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="windowActionModeOverlay">true</item>
     </style>
 
-    <!-- 앱 전체 테마 -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
-    <!-- 메시지 정보 텍스트 -->
     <style name="ChatMessageInfo">
         <item name="android:textSize">11sp</item>
     </style>
 
-    <!-- 채팅 헤더 타이틀 -->
     <style name="ChatHeaderTitle">
         <item name="android:textStyle">bold</item>
     </style>
 
-    <!-- 타이핑 중 표시 -->
     <style name="ChatWhoIsTyping">
         <item name="android:lines">1</item>
         <item name="android:ellipsize">end</item>
     </style>
 
-    <!-- 전송 버튼 -->
     <style name="ChatSendButton">
         <item name="android:maxLines">5</item>
     </style>
 
-    <!-- 입력창 텍스트 -->
     <style name="ChatInputEditText">
         <item name="android:background">@null</item>
         <item name="android:textAllCaps">true</item>
     </style>
 
-    <!-- 아웃고잉 메시지 레이아웃 -->
     <style name="ChatMessageLayoutOutcoming">
         <item name="android:paddingLeft">8dp</item>
         <item name="android:paddingTop">8dp</item>
@@ -141,7 +151,6 @@
         <item name="android:layout_marginBottom">4dp</item>
     </style>
 
-    <!-- 인커밍 메시지 레이아웃 -->
     <style name="ChatMessageLayoutIncoming">
         <item name="android:paddingLeft">16dp</item>
         <item name="android:paddingTop">8dp</item>
@@ -152,7 +161,6 @@
         <item name="android:layout_marginBottom">4dp</item>
     </style>
 
-    <!-- 채팅 헤더 레이아웃 -->
     <style name="ChatHeaderLayout">
         <item name="android:padding">8dp</item>
         <item name="android:layout_marginTop">4dp</item>

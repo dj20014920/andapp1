@@ -1,5 +1,11 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#4353AF"/>
+    <!-- 상단과 같은 연한 파란색 그라디언트 -->
+    <gradient
+        android:startColor="#5C9BD1"
+        android:centerColor="#4A90E2"
+        android:endColor="#357ABD"
+        android:angle="135"
+        android:type="linear" />
     <corners android:radius="16dp"/>
 </shape>

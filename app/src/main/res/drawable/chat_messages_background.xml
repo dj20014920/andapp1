@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 메시지 배경용 연한 그라디언트 -->
+    <gradient
+        android:startColor="#F8FDFF"
+        android:centerColor="#F0F9FF"
+        android:endColor="#E8F7FF"
+        android:angle="135"
+        android:type="linear" />
+</shape>

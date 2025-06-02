@@ -15,6 +15,7 @@ import android.view.*
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.Toast
+import android.widget.ImageView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
@@ -376,35 +377,48 @@ class ChatActivity : AppCompatActivity() {
                 }
             }
 
-
+            // ✅ 커스텀 ViewHolder 사용
             val holders = MessageHolders()
-                // 📝 텍스트 메시지용 커스텀 홀더 (URL 클릭 처리)
                 .setIncomingTextHolder(
-                    TextMessageViewHolder::class.java,
-                    com.stfalcon.chatkit.R.layout.item_incoming_text_message // chatkit 기본 레이아웃 사용
+                    CustomIncomingTextViewHolder::class.java,
+                    R.layout.item_incoming_text_message
                 )
+                .setIncomingImageHolder(
+                    CustomIncomingImageViewHolder::class.java,
+                    R.layout.item_incoming_image_message
+                )
+                // outcoming은 기본 사용 (프로필 이미지 없음)
                 .setOutcomingTextHolder(
                     TextMessageViewHolder::class.java,
-                    com.stfalcon.chatkit.R.layout.item_outcoming_text_message // chatkit 기본 레이아웃 사용
+                    com.stfalcon.chatkit.R.layout.item_outcoming_text_message
                 )
-                // 📸 이미지 메시지용 홀더
                 .setOutcomingImageHolder(
                     OutcomingImageMessageViewHolder::class.java,
                     R.layout.item_outcoming_image_message
                 )
-                .setIncomingImageHolder(
-                    IncomingImageMessageViewHolder::class.java,
-                    R.layout.item_incoming_image_message
-                )
+
             // 3) 어댑터 생성
             adapter = MessagesListAdapter<ChatMessage>(
                 senderId,
                 holders,
                 ImageLoader { imageView, url, _ ->
-                    Glide.with(imageView.context).load(url).into(imageView)
+                    // ✅ 디버깅 로그 추가
+                    Log.d("ProfileDebug", "=== ImageLoader 호출됨 ===")
+                    Log.d("ProfileDebug", "ImageView: $imageView")
+                    Log.d("ProfileDebug", "URL: $url")
+
+                    if (!url.isNullOrEmpty()) {
+                        Log.d("ProfileDebug", "Glide로 이미지 로드 시작: $url")
+                        Glide.with(imageView.context)
+                            .load(url)
+                            .error(R.drawable.ic_launcher_background) // 에러 시 기본 이미지 표시
+                            .into(imageView)
+                    } else {
+                        Log.w("ProfileDebug", "URL이 비어있어서 기본 이미지 설정")
+                        imageView.setImageResource(R.drawable.ic_launcher_background) // 기본 이미지
+                    }
                 }
             )
-
 
             binding.messagesList.setAdapter(adapter)
 
@@ -464,11 +478,25 @@ class ChatActivity : AppCompatActivity() {
 
     private fun observeMessages() {
         viewModel.messages.observe(this) { messages ->
+            Log.d("ProfileDebug", "=== observeMessages 호출됨 ===")
+            Log.d("ProfileDebug", "받은 메시지 개수: ${messages.size}")
+
+            // ✅ 각 메시지의 프로필 이미지 URL 확인
+            messages.forEach { message ->
+                Log.d("ProfileDebug", "메시지 ID: ${message.messageId}")
+                Log.d("ProfileDebug", "사용자: ${message.getUser().getName()} (${message.getUser().getId()})")
+                Log.d("ProfileDebug", "프로필 이미지: ${message.getUser().getAvatar()}")
+                Log.d("ProfileDebug", "---")
+            }
+
             val sorted = messages
                 .filter { it.messageId.isNotBlank() }
                 .distinctBy { it.messageId }
                 .sortedBy { it.createdAt.time }
                 .reversed() // ✅ 최신이 아래로 오도록 보장
+
+            Log.d("ProfileDebug", "정렬된 메시지 개수: ${sorted.size}")
+
             adapter.setItems(sorted)
 
             imageMessages.clear()
@@ -483,7 +511,6 @@ class ChatActivity : AppCompatActivity() {
             }
         }
     }
-
 
     private fun scrollToBottomSmooth() {
         binding.messagesList.postDelayed({
@@ -684,5 +711,52 @@ class ChatActivity : AppCompatActivity() {
     companion object {
         const val REQUEST_CAMERA = 1001
         const val REQUEST_GALLERY = 1002
+    }
+}
+
+// ✅ 커스텀 ViewHolder 클래스들
+class CustomIncomingTextViewHolder(itemView: View) : MessageHolders.IncomingTextMessageViewHolder<ChatMessage>(itemView) {
+
+    override fun onBind(message: ChatMessage) {
+        super.onBind(message)
+
+        // 강제로 프로필 이미지 로드
+        val avatarView = itemView.findViewById<ImageView>(R.id.messageUserAvatar)
+        val avatarUrl = message.getUser().getAvatar()
+
+        Log.d("CustomViewHolder", "텍스트 메시지 프로필 이미지 로드: $avatarUrl")
+
+        if (!avatarUrl.isNullOrEmpty()) {
+            Glide.with(itemView.context)
+                .load(avatarUrl)
+                .circleCrop() // 원형으로 표시
+                .error(R.drawable.ic_launcher_background) // 에러 시 기본 이미지
+                .into(avatarView)
+        } else {
+            avatarView.setImageResource(R.drawable.ic_launcher_background) // 기본 이미지
+        }
+    }
+}
+
+class CustomIncomingImageViewHolder(itemView: View) : MessageHolders.IncomingImageMessageViewHolder<ChatMessage>(itemView) {
+
+    override fun onBind(message: ChatMessage) {
+        super.onBind(message)
+
+        // 강제로 프로필 이미지 로드
+        val avatarView = itemView.findViewById<ImageView>(R.id.messageUserAvatar)
+        val avatarUrl = message.getUser().getAvatar()
+
+        Log.d("CustomViewHolder", "이미지 메시지 프로필 이미지 로드: $avatarUrl")
+
+        if (!avatarUrl.isNullOrEmpty()) {
+            Glide.with(itemView.context)
+                .load(avatarUrl)
+                .circleCrop() // 원형으로 표시
+                .error(R.drawable.ic_launcher_background) // 에러 시 기본 이미지
+                .into(avatarView)
+        } else {
+            avatarView.setImageResource(R.drawable.ic_launcher_background) // 기본 이미지
+        }
     }
 }

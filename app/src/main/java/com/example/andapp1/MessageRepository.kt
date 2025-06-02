@@ -25,22 +25,31 @@ class MessageRepository(private val roomCode: String) {
             val messageList = mutableListOf<ChatMessage>()
             val userIds = mutableSetOf<String>()
 
+            Log.d("ProfileDebug", "=== MessageRepository 메시지 로드 시작 ===")
+
             // 1) 메시지 수집 및 사용자 ID 추출
             for (child in snapshot.children) {
                 child.getValue(ChatMessage::class.java)?.let { message ->
                     if (message.getText().isNotBlank() || message.imageUrl != null) {
                         messageList.add(message)
                         userIds.add(message.getUser().getId())
+                        Log.d("ProfileDebug", "메시지 로드됨 - 사용자: ${message.getUser().getId()}, 기존 avatar: ${message.getUser().getAvatar()}")
                     }
                 }
             }
 
+            Log.d("ProfileDebug", "수집된 사용자 ID들: $userIds")
+
             // 2) 사용자별 프로필 이미지 로드
             loadUserProfiles(userIds) { userProfiles ->
+                Log.d("ProfileDebug", "로드된 프로필 맵: $userProfiles")
+
                 // 3) 메시지에 프로필 이미지 매핑
                 val updatedMessages = messageList.map { message ->
                     val userId = message.getUser().getId()
                     val profileImageUrl = userProfiles[userId]
+
+                    Log.d("ProfileDebug", "메시지 업데이트 - 사용자: $userId, 프로필URL: $profileImageUrl")
 
                     // Author에 프로필 이미지 설정
                     val updatedAuthor = Author(
@@ -48,6 +57,8 @@ class MessageRepository(private val roomCode: String) {
                         name = message.getUser().getName(),
                         avatar = profileImageUrl
                     )
+
+                    Log.d("ProfileDebug", "업데이트된 Author avatar: ${updatedAuthor.getAvatar()}")
 
                     // 새로운 ChatMessage 생성 (기존 데이터 유지 + 프로필 이미지 추가)
                     ChatMessage(
@@ -80,20 +91,29 @@ class MessageRepository(private val roomCode: String) {
     // 사용자 프로필 이미지 일괄 로드
     private fun loadUserProfiles(userIds: Set<String>, callback: (Map<String, String?>) -> Unit) {
         if (userIds.isEmpty()) {
+            Log.d("ProfileDebug", "사용자 ID가 없어서 프로필 로드 생략")
             callback(emptyMap())
             return
         }
+
+        Log.d("ProfileDebug", "프로필 이미지 로드 시작 - 대상 사용자: $userIds")
 
         val userProfiles = mutableMapOf<String, String?>()
         var loadedCount = 0
 
         for (userId in userIds) {
+            Log.d("ProfileDebug", "사용자 프로필 로드 중: $userId")
+
             usersRef.child(userId).child("profileImageUrl").get()
                 .addOnSuccessListener { snapshot ->
-                    userProfiles[userId] = snapshot.getValue(String::class.java)
+                    val profileUrl = snapshot.getValue(String::class.java)
+                    userProfiles[userId] = profileUrl
                     loadedCount++
 
+                    Log.d("ProfileDebug", "프로필 로드 성공 - 사용자: $userId, URL: $profileUrl")
+
                     if (loadedCount == userIds.size) {
+                        Log.d("ProfileDebug", "모든 프로필 로드 완료: $userProfiles")
                         callback(userProfiles)
                     }
                 }
@@ -103,6 +123,7 @@ class MessageRepository(private val roomCode: String) {
                     loadedCount++
 
                     if (loadedCount == userIds.size) {
+                        Log.d("ProfileDebug", "프로필 로드 완료 (일부 실패 포함): $userProfiles")
                         callback(userProfiles)
                     }
                 }

@@ -34,11 +34,19 @@ class ChatViewModel(val roomCode: String,
             }
 
             if (currentUser != null) {
+                // ✅ 디버깅 로그 추가
+                Log.d("ProfileDebug", "=== 메시지 전송 시 프로필 디버깅 ===")
+                Log.d("ProfileDebug", "사용자 ID: ${currentUser.id}")
+                Log.d("ProfileDebug", "사용자 닉네임: ${currentUser.nickname}")
+                Log.d("ProfileDebug", "프로필 이미지 URL: ${currentUser.profileImageUrl}")
+
                 val user = Author(
                     id = currentUser.id,
                     name = currentUser.nickname ?: "알 수 없음",
                     avatar = currentUser.profileImageUrl // ✅ 프로필 이미지 URL 설정
                 )
+
+                Log.d("ProfileDebug", "Author avatar 설정됨: ${user.getAvatar()}")
 
                 val message = ChatMessage(
                     messageId = "",

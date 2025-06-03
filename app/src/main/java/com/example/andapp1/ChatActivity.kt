@@ -46,8 +46,15 @@ import org.opencv.android.OpenCVLoader
 import java.util.Date
 import androidx.lifecycle.Observer
 import android.content.Context
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.text.util.Linkify
 import android.view.LayoutInflater
 import android.view.Gravity
+import java.util.regex.Pattern
+
 class ChatActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityChatBinding
@@ -721,6 +728,40 @@ class CustomIncomingTextViewHolder(itemView: View) : MessageHolders.IncomingText
     override fun onBind(message: ChatMessage) {
         super.onBind(message)
 
+        val messageTextView = itemView.findViewById<TextView>(R.id.messageText)
+        val rawText = message.text
+        val spannable = SpannableString(rawText)
+
+        Linkify.addLinks(spannable, Linkify.WEB_URLS)
+        processMapUrls(spannable, rawText)
+
+        messageTextView.text = spannable
+        messageTextView.movementMethod = LinkMovementMethod.getInstance()
+        messageTextView.linksClickable = true
+
+        messageTextView.setOnTouchListener { v, event ->
+            val textView = v as TextView
+            val s = textView.text as? Spannable ?: return@setOnTouchListener false
+
+            val action = event.action
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_DOWN) {
+                val x = event.x.toInt() - textView.totalPaddingLeft + textView.scrollX
+                val y = event.y.toInt() - textView.totalPaddingTop + textView.scrollY
+
+                val layout = textView.layout ?: return@setOnTouchListener false
+                val line = layout.getLineForVertical(y)
+                val off = layout.getOffsetForHorizontal(line, x.toFloat())
+
+                val links = s.getSpans(off, off, ClickableSpan::class.java)
+                if (links.isNotEmpty()) {
+                    if (action == MotionEvent.ACTION_UP) {
+                        links[0].onClick(textView)
+                    }
+                    return@setOnTouchListener true
+                }
+            }
+            return@setOnTouchListener false
+        }
         // 프로필 이미지 설정
         val avatarView = itemView.findViewById<ImageView>(R.id.messageUserAvatar)
         val avatarUrl = message.getUser().getAvatar()
@@ -752,6 +793,57 @@ class CustomIncomingTextViewHolder(itemView: View) : MessageHolders.IncomingText
         // ✅ 사용자 이름 클릭 이벤트 추가
         userNameView.setOnClickListener {
             showUserDetailDialog(itemView.context, message.getUser())
+        }
+    }
+
+    private fun processMapUrls(spannable: Spannable, text: String) {
+        // 지도 URL 패턴
+        val mapPatterns = arrayOf(
+            "https://m\\.map\\.naver\\.com[^\\s]*",
+            "https://map\\.naver\\.com[^\\s]*",
+            "https://map\\.kakao\\.com[^\\s]*",
+            "https://maps\\.google\\.com[^\\s]*",
+            "https://www\\.google\\.com/maps[^\\s]*"
+        )
+
+        for (patternStr in mapPatterns) {
+            val pattern = Pattern.compile(patternStr, Pattern.CASE_INSENSITIVE)
+            val matcher = pattern.matcher(text)
+
+            while (matcher.find()) {
+                val start = matcher.start()
+                val end = matcher.end()
+                val mapUrl = text.substring(start, end)
+
+                Log.d("TextMessageViewHolder", "🗺️ 지도 URL 발견: $mapUrl")
+
+                // 기존 URL 링크 제거하고 커스텀 링크로 교체
+                val existingSpans = spannable.getSpans(start, end, ClickableSpan::class.java)
+                for (span in existingSpans) {
+                    spannable.removeSpan(span)
+                }
+
+                // 커스텀 지도 링크 적용
+                val mapClickSpan = object : ClickableSpan() {
+                    override fun onClick(widget: View) {
+                        Log.d("TextMessageViewHolder", "🗺️ 지도 링크 클릭: $mapUrl")
+                        try {
+                            val intent = Intent(widget.context, MapActivity::class.java)
+                            intent.putExtra("mapUrl", mapUrl)
+                            widget.context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("TextMessageViewHolder", "지도 액티비티 실행 실패", e)
+                        }
+                    }
+                }
+
+                spannable.setSpan(
+                    mapClickSpan,
+                    start,
+                    end,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
         }
     }
 

@@ -94,6 +94,7 @@ dependencies {
     implementation(project(":chatkit"))
     implementation("com.rmtheis:tess-two:9.1.0")
     implementation(project(":openCVLibrary"))
+    implementation ("com.airbnb.android:lottie:6.4.0")
 
 
 }

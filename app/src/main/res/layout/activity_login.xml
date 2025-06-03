@@ -5,7 +5,7 @@
     android:id="@+id/loginLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
+    android:background="@drawable/splash_gradients"
     android:orientation="vertical"
     android:gravity="center"
     android:padding="32dp"
@@ -16,7 +16,7 @@
         android:id="@+id/appTitleTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="여행 메이트"
+        android:text="Travel Maker"
         android:textSize="28sp"
         android:textStyle="bold"
         android:textColor="#333333"
@@ -29,8 +29,8 @@
         android:layout_height="wrap_content"
         android:src="@drawable/kakao"
         android:contentDescription="카카오 로그인 버튼"
-        android:layout_marginBottom="20dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginBottom="30dp"
+        android:layout_marginTop="30dp"
         android:background="@android:color/transparent" />
 
     <!-- 나중에 구글 로그인 버튼도 추가 가능 -->

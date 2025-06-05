@@ -36,6 +36,7 @@ import android.Manifest
 import android.R.attr.bitmap
 import android.R.attr.data
 import android.R.id.message
+import android.content.ClipData
 import android.graphics.BitmapFactory
 import android.widget.TextView
 import com.bumptech.glide.Glide
@@ -54,6 +55,9 @@ import android.text.util.Linkify
 import android.view.LayoutInflater
 import android.view.Gravity
 import java.util.regex.Pattern
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 
 class ChatActivity : AppCompatActivity() {
 
@@ -379,12 +383,18 @@ class ChatActivity : AppCompatActivity() {
                 .child(user.id)
 
             participantsRef.get().addOnSuccessListener { snapshot ->
+                Log.d("ChatActivity_Participants", "참가자 스냅샷 수신. key: ${snapshot.key}, exists: ${snapshot.exists()}")
                 if (!snapshot.exists()) {
-                    Toast.makeText(this@ChatActivity, "⚠ 이미 나간 채팅방입니다.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ChatActivity, "⚠ 이미 나간 채팅방이거나 참여자 정보 없음.", Toast.LENGTH_SHORT).show()
+                    Log.w("ChatActivity_Participants", "참가자가 아니므로 finish() 호출됨. User ID: ${user.id}, Room Code: ${viewModel.roomCode}")
                     finish() // 🚫 채팅방 입장 금지
                 } else {
-                    Log.d("ChatActivity", "✅ 참가자 확인 완료")
+                    Log.d("ChatActivity_Participants", "✅ 참가자 확인 완료. User ID: ${user.id}, Room Code: ${viewModel.roomCode}")
                 }
+            }.addOnFailureListener { exception ->
+                Log.e("ChatActivity_Participants", "참가자 정보 로드 실패: ${exception.message}", exception)
+                Toast.makeText(this@ChatActivity, "⚠ 참가자 정보를 가져오는데 실패했습니다.", Toast.LENGTH_SHORT).show()
+                // finish() // 실패 시에도 일단 종료 (기존 로직 유지 또는 다른 처리 고민 필요) -> 실패 시 바로 종료하지 않도록 일단 주석 처리
             }
 
             // ✅ 커스텀 ViewHolder 사용
@@ -565,6 +575,7 @@ class ChatActivity : AppCompatActivity() {
                 startActivity(intent)
                 true
             }
+
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -637,36 +648,62 @@ class ChatActivity : AppCompatActivity() {
 
         participantsRef.get().addOnSuccessListener { snapshot ->
             val defaultPeople = snapshot.childrenCount.toInt().coerceAtLeast(1)
+            showParticipantsInputDialog(bitmap, defaultPeople)
+        }.addOnFailureListener { exception ->
+            Log.e("FIREBASE_OCR", "참여자 수 로드 실패. 기본값 사용.", exception)
+            showParticipantsInputDialog(bitmap, 4, "참여자 정보를 가져오지 못했습니다. 기본값(4명)을 사용합니다.")
+        }
+    }
 
-            val editText = EditText(this).apply {
-                setText(defaultPeople.toString())
-                inputType = InputType.TYPE_CLASS_NUMBER
-            }
+    private fun showParticipantsInputDialog(bitmap: Bitmap, defaultPeopleCount: Int, messageHint: String? = null) {
+        val editText = EditText(this@ChatActivity).apply {
+            setText(defaultPeopleCount.toString())
+            inputType = InputType.TYPE_CLASS_NUMBER
+        }
 
-            AlertDialog.Builder(this)
-                .setTitle("정산 인원 수를 입력하세요")
-                .setMessage("기본값은 ${defaultPeople}명입니다.")
-                .setView(editText)
-                // processOcrWithPeopleInput() 안에서…
-                .setPositiveButton("확인") { _, _ ->
-                    val people = editText.text.toString().toIntOrNull() ?: defaultPeople
-                    try {
-                        val text = ReceiptOcrProcessor.processReceipt(this, bitmap)
-                        Log.d("OCR", "ChatActivity → OCR 결과 텍스트 = $text")
-                        val total = ReceiptOcrProcessor.extractTotalAmount(text)
-                        Log.d("OCR", "ChatActivity → total = $total, people = $people")
-                        val message = "→ 총합: ${total ?: 0}원 / 인당: ${(total ?: 0) / people}원"
-                        sendChatMessage(message)
+        val dialogTitle = "정산 인원 수를 입력하세요"
+        val dialogMessage = messageHint ?: "정산 인원을 입력해주세요. (현재 방 인원 자동 반영: ${defaultPeopleCount}명)"
 
-                    } catch (e: Exception) {
-                        Log.e("OCR_PROCESS", "ChatActivity OCR 처리 중 예외", e)
-                        Toast.makeText(this, "영수증 인식에 실패했습니다.", Toast.LENGTH_SHORT).show()
-                    }
+
+        AlertDialog.Builder(this@ChatActivity)
+            .setTitle(dialogTitle)
+            .setMessage(dialogMessage)
+            .setView(editText)
+            .setPositiveButton("확인") { _, _ ->
+                val enteredPeople = editText.text.toString().toIntOrNull()
+                val finalValidPeople = enteredPeople?.takeIf { it > 0 } ?: defaultPeopleCount
+
+                if (enteredPeople != null && enteredPeople <= 0) {
+                    Toast.makeText(this@ChatActivity, "정산 인원은 1명 이상이어야 합니다. 기본값(${defaultPeopleCount}명)으로 설정됩니다.", Toast.LENGTH_LONG).show()
                 }
 
-                .setNegativeButton("취소", null)
-                .show()
-        }
+                lifecycleScope.launch(Dispatchers.Default) {
+                    try {
+                        val ocrText = ReceiptOcrProcessor.processReceipt(this@ChatActivity, bitmap)
+                        val totalAmount = ReceiptOcrProcessor.extractTotalAmount(ocrText)
+                        
+                        if (totalAmount != null && totalAmount > 0) {
+                            val perPerson = totalAmount / finalValidPeople
+                            val message = "📝 영수증 정산\n" +
+                                        "→ 총액: ${totalAmount}원\n" +
+                                        "→ 인원: ${finalValidPeople}명\n" +
+                                        "→ 1인당: ${perPerson}원"
+                            sendChatMessage(message) 
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@ChatActivity, "영수증 총액을 인식할 수 없습니다.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("OCR_PROCESS", "ChatActivity OCR 처리 중 예외", e)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@ChatActivity, "영수증 인식에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("취소", null)
+            .show()
     }
 
     private fun uploadImageToFirebase(uri: Uri) {
@@ -716,6 +753,11 @@ class ChatActivity : AppCompatActivity() {
         Log.d("🔍 ChatDebug", "message sender id = ${message.getUser().getId()}")
 
         viewModel.sendMessage(message)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("ChatActivity_Lifecycle", "onDestroy 호출됨", Exception("onDestroy Call Stack"))
     }
 
     companion object {

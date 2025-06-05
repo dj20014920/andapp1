@@ -18,6 +18,7 @@ object DialogHelper {
         room: Room,
         onChangeNameClick: () -> Unit,
         onParticipantsClick: () -> Unit,
+        onInviteCodeClick: () -> Unit,
         onLeaveRoomClick: () -> Unit
     ) {
         val popup = PopupMenu(context, anchorView)
@@ -31,6 +32,10 @@ object DialogHelper {
                 }
                 R.id.menu_participants -> {
                     onParticipantsClick()
+                    true
+                }
+                R.id.menu_invite_code -> {
+                    onInviteCodeClick();
                     true
                 }
                 R.id.menu_leave_room -> {

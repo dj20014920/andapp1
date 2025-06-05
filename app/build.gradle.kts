@@ -1,13 +1,11 @@
 import org.gradle.kotlin.dsl.implementation
 
-
 plugins {
+    id("com.google.devtools.ksp")
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
     id("com.google.gms.google-services")
-    id("com.google.devtools.ksp") version "2.1.20-1.0.32"
-
 }
 
 android {
@@ -49,11 +47,11 @@ android {
         jvmTarget = "17"
     }
 }
-repositories {
-    google()
-    mavenCentral()
-    maven { url = uri("https://devrepo.kakao.com/nexus/content/groups/public/") }
-}
+// repositories {
+//     google()
+//     mavenCentral()
+//     maven { url = uri("https://devrepo.kakao.com/nexus/content/groups/public/") }
+// }
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
@@ -92,7 +90,8 @@ dependencies {
 
     // 내부 프로젝트
     implementation(project(":chatkit"))
-    implementation("com.rmtheis:tess-two:9.1.0")
+    // implementation("com.rmtheis:tess-two:9.1.0")
+    implementation("cz.adaptech.tesseract4android:tesseract4android:4.7.0")
     implementation(project(":openCVLibrary"))
     implementation ("com.airbnb.android:lottie:6.4.0")
 

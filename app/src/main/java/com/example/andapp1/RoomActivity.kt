@@ -54,6 +54,9 @@ class RoomActivity : AppCompatActivity() {
                 onMenuChangeNameClick = { room -> /* 이름 변경 구현 */ },
                 onMenuParticipantsClick = { room -> /* 참여자 목록 */ },
                 onMenuLeaveRoomClick = { room -> leaveRoom(room) },
+                onMenuInviteCodeClick = { room ->
+                    showInviteCodeDialog(room)
+                },
                 onFavoriteToggle = { room, isFavorite -> /* 즐겨찾기 처리 */ }
             )
 
@@ -109,4 +112,21 @@ class RoomActivity : AppCompatActivity() {
             adapter.updateRooms(rooms)
         }
     }
+    private fun showInviteCodeDialog(room: Room) {
+        val inviteCode = room.roomCode
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("초대 코드")
+            .setMessage("이 채팅방의 초대 코드는\n$inviteCode 입니다.")
+            .setPositiveButton("복사") { dialog, _ ->
+                val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("roomCode", inviteCode)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, "초대 코드가 복사되었습니다!", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+            .setNegativeButton("닫기", null)
+            .show()
+    }
+
 }

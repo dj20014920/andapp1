@@ -4,8 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.googlecode.tesseract.android.TessBaseAPI
-import com.googlecode.tesseract.android.TessBaseAPI.PageSegMode
-import com.googlecode.tesseract.android.TessBaseAPI.VAR_CHAR_WHITELIST
 import java.io.File
 import java.io.FileOutputStream
 import org.opencv.android.Utils
@@ -14,38 +12,53 @@ import org.opencv.imgproc.Imgproc
 
 object ReceiptOcrProcessor {
 
+    private const val TAG = "OCR_T4A_Lifecycle"
+
     fun copyTrainedDataIfNeeded(context: Context) {
-        val tessDir = File(context.filesDir, "tesseract/tessdata").apply { if (!exists()) mkdirs() }
+        val tessDir = File(context.filesDir, "tesseract/tessdata").apply { 
+            if (!exists()) {
+                mkdirs()
+                Log.d(TAG, "Tesseract data directory 생성: ${this.absolutePath}")
+            }
+        }
         listOf("eng", "kor").forEach { lang ->
             val outFile = File(tessDir, "$lang.traineddata")
-            if (!outFile.exists()) {
-                context.assets.open("tessdata/$lang.traineddata").use { input ->
-                    FileOutputStream(outFile).use { output ->
-                        input.copyTo(output)
+            if (!outFile.exists() || outFile.length() == 0L) {
+                try {
+                    context.assets.open("tessdata/$lang.traineddata").use { input ->
+                        FileOutputStream(outFile).use { output ->
+                            input.copyTo(output)
+                        }
                     }
+                    Log.d(TAG, "$lang.traineddata 복사 성공 (${outFile.length()} bytes) to ${outFile.absolutePath}")
+                } catch (e: Exception) {
+                    Log.e(TAG, "$lang.traineddata 복사 중 오류 발생", e)
                 }
-                Log.d("OCR", "$lang.traineddata 복사 성공 → ${outFile.length()} bytes")
             } else {
-                Log.d("OCR", "$lang.traineddata 이미 존재 → ${outFile.length()} bytes")
+                Log.d(TAG, "$lang.traineddata 이미 존재 (${outFile.length()} bytes) at ${outFile.absolutePath}")
             }
         }
     }
 
     fun processReceipt(context: Context, bitmap: Bitmap): String {
+        Log.d(TAG, "processReceipt 시작")
 
         copyTrainedDataIfNeeded(context)
         val baseDir = File(context.filesDir, "tesseract")
         val tessdataDir = File(baseDir, "tessdata")
         if (!tessdataDir.exists()) tessdataDir.mkdirs()
-        Log.d("OCR", "tessdata 최종 내용 = ${tessdataDir.list()?.joinToString()}")
+        Log.d(TAG, "tessdata 최종 내용 = ${tessdataDir.list()?.joinToString()}")
 
         // OpenCV 전처리
+        Log.d(TAG, "OpenCV 전처리 시작")
         val srcMat = Mat()
         Utils.bitmapToMat(bitmap, srcMat)
+        Log.d(TAG, "bitmapToMat 완료")
 
         // 3) 그레이스케일
         val grayMat = Mat()
         Imgproc.cvtColor(srcMat, grayMat, Imgproc.COLOR_BGR2GRAY)
+        Log.d(TAG, "cvtColor 완료")
 
         // 4) Adaptive Threshold 이진화
         val threshMat = Mat()
@@ -54,12 +67,15 @@ object ReceiptOcrProcessor {
             255.0, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
             Imgproc.THRESH_BINARY_INV, 21,4.0
         )
+        Log.d(TAG, "adaptiveThreshold 완료")
 
         val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, org.opencv.core.Size(2.0, 2.0))
         Imgproc.morphologyEx(threshMat, threshMat, Imgproc.MORPH_OPEN, kernel)
+        Log.d(TAG, "morphologyEx 완료")
 
         val denoisedMat = Mat()
         Imgproc.medianBlur(threshMat, denoisedMat, 3)
+        Log.d(TAG, "medianBlur 완료")
 
         // 6) Mat → Bitmap (Tesseract 입력용)
         val processedBmp = Bitmap.createBitmap(
@@ -68,28 +84,78 @@ object ReceiptOcrProcessor {
             Bitmap.Config.ARGB_8888
         )
         Utils.matToBitmap(denoisedMat, processedBmp)
+        Log.d(TAG, "matToBitmap 완료")
 
         // 7) Mat 메모리 해제
         srcMat.release()
         grayMat.release()
         threshMat.release()
         denoisedMat.release()
+        Log.d(TAG, "Mat 메모리 해제 완료")
 
         val tess = TessBaseAPI()
         return try {
-            tess.init(baseDir.absolutePath, "kor+eng")
-            tess.setVariable(VAR_CHAR_WHITELIST, "0123456789,원합계총액금액")
-            tess.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO)
-            tess.setImage(processedBmp)
+            Log.d(TAG, "Tesseract baseDir path: ${baseDir.absolutePath}")
+            Log.d(TAG, "Tesseract tessdata directory exists: ${File(baseDir, "tessdata").exists()}")
+            Log.d(TAG, "Tesseract tessdata files: ${File(baseDir, "tessdata").listFiles()?.joinToString { it.name }}")
 
-            val result = tess.utF8Text
-            Log.d("OCR", "인식된 텍스트 = $result")
+            var initialized = false
+            var lastError: Throwable? = null
+
+            // 1. 한국어 시도
+            var langToTry = "kor"
+            Log.d(TAG, "Tesseract 초기화 시도 (init) - 언어: $langToTry")
+            try {
+                tess.init(baseDir.absolutePath, langToTry)
+                Log.d(TAG, "tess.init($langToTry) 호출 반환됨")
+                initialized = true
+                Log.d(TAG, "Tesseract 초기화 성공으로 간주 ($langToTry)")
+            } catch (t: Throwable) {
+                Log.e(TAG, "Tesseract 초기화 실패 ($langToTry)", t)
+                lastError = t
+            }
+
+            // 2. 한국어 실패 시 영어 시도
+            if (!initialized) {
+                langToTry = "eng"
+                Log.d(TAG, "Tesseract 초기화 시도 (init) - 언어: $langToTry (fallback)")
+                try {
+                    tess.init(baseDir.absolutePath, langToTry)
+                    Log.d(TAG, "tess.init($langToTry) 호출 반환됨")
+                    initialized = true
+                    Log.d(TAG, "Tesseract 초기화 성공으로 간주 ($langToTry)")
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Tesseract 초기화 실패 ($langToTry)", t)
+                    if (lastError == null) lastError = t else lastError.addSuppressed(t)
+                }
+            }
+
+            if (!initialized) {
+                val errorMessage = "Tesseract API가 두 언어(kor, eng) 모두에 대해 성공적으로 초기화되지 않았습니다."
+                Log.e(TAG, errorMessage)
+                throw RuntimeException(errorMessage, lastError)
+            }
+
+            Log.d(TAG, "Tesseract setVariable 및 setPageSegMode 설정 시도")
+            tess.setVariable("tessedit_char_whitelist", "0123456789,원합계총액금액")
+            tess.pageSegMode = TessBaseAPI.PageSegMode.PSM_SINGLE_COLUMN
+            Log.d(TAG, "Tesseract 이미지 설정 시도")
+            tess.setImage(processedBmp)
+            Log.d(TAG, "Tesseract 이미지 설정 완료")
+
+            Log.d(TAG, "Tesseract 텍스트 인식 시도")
+            val result = tess.getUTF8Text()
+            Log.d(TAG, "Tesseract 텍스트 인식 완료")
+            Log.d(TAG, "인식된 텍스트 = $result")
             result
-        } catch (e: Exception) {
-            Log.e("OCR", "processReceipt() 예외 발생", e)
-            ""
+        } catch (t: Throwable) {
+            Log.e(TAG, "processReceipt() 내에서 예외 발생 또는 Tesseract 초기화 실패", t)
+            throw t
         } finally {
-            tess.end()
+            Log.d(TAG, "Tesseract end 시도")
+            tess.recycle()
+            Log.d(TAG, "Tesseract end 완료")
+            Log.d(TAG, "processReceipt 종료")
         }
     }
 

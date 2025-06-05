@@ -23,6 +23,9 @@ import com.google.firebase.database.ValueEventListener
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import androidx.appcompat.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
 
 class MainActivity : AppCompatActivity() {
 
@@ -170,6 +173,12 @@ class MainActivity : AppCompatActivity() {
             onMenuParticipantsClick = { room ->
                 DialogHelper.showParticipantsDialog(this, room.roomCode)
             },
+
+            onMenuInviteCodeClick = { room ->  // ✅ 여기!
+                // 초대코드 다이얼로그 호출!
+                showInviteCodeDialog(room)
+            },
+
             onMenuLeaveRoomClick = { room ->
                 DialogHelper.showLeaveRoomDialog(this) {
                     currentUserId?.let { userId ->
@@ -373,4 +382,22 @@ class MainActivity : AppCompatActivity() {
         // 🎨 화면 복귀 시에도 버튼 색상 재설정
         setupButtonColors()
     }
+
+    private fun showInviteCodeDialog(room: Room) {
+        val inviteCode = room.roomCode
+
+        AlertDialog.Builder(this)
+            .setTitle("초대 코드")
+            .setMessage("\n$inviteCode")
+            .setPositiveButton("복사") { dialog, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("roomCode", inviteCode)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, "초대 코드가 복사되었습니다!", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+            .setNegativeButton("닫기", null)
+            .show()
+    }
+
 }

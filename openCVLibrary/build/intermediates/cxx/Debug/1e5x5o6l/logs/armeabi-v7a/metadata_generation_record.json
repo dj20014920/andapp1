@@ -2,7 +2,7 @@
   {
     "level_": 0,
     "message_": "Start JSON generation. Platform version: 21 min SDK version: armeabi-v7a",
-    "file_": "C:\\Users\\ghkdd\\AndroidStudioProjects\\andapp1\\openCVLibrary\\libcxx_helper\\CMakeLists.txt",
+    "file_": "/Users/dj20014920/Desktop/AndApp1/openCVLibrary/libcxx_helper/CMakeLists.txt",
     "tag_": "debug|armeabi-v7a",
     "diagnosticCode_": 0,
     "memoizedIsInitialized": 1,
@@ -14,8 +14,8 @@
   },
   {
     "level_": 0,
-    "message_": "JSON \u0027C:\\Users\\ghkdd\\AndroidStudioProjects\\andapp1\\openCVLibrary\\.cxx\\Debug\\1e5x5o6l\\armeabi-v7a\\android_gradle_build.json\u0027 was up-to-date",
-    "file_": "C:\\Users\\ghkdd\\AndroidStudioProjects\\andapp1\\openCVLibrary\\libcxx_helper\\CMakeLists.txt",
+    "message_": "JSON \u0027/Users/dj20014920/Desktop/AndApp1/openCVLibrary/.cxx/Debug/1e5x5o6l/armeabi-v7a/android_gradle_build.json\u0027 was up-to-date",
+    "file_": "/Users/dj20014920/Desktop/AndApp1/openCVLibrary/libcxx_helper/CMakeLists.txt",
     "tag_": "debug|armeabi-v7a",
     "diagnosticCode_": 0,
     "memoizedIsInitialized": 1,
@@ -28,7 +28,7 @@
   {
     "level_": 0,
     "message_": "JSON generation completed without problems",
-    "file_": "C:\\Users\\ghkdd\\AndroidStudioProjects\\andapp1\\openCVLibrary\\libcxx_helper\\CMakeLists.txt",
+    "file_": "/Users/dj20014920/Desktop/AndApp1/openCVLibrary/libcxx_helper/CMakeLists.txt",
     "tag_": "debug|armeabi-v7a",
     "diagnosticCode_": 0,
     "memoizedIsInitialized": 1,

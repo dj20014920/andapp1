@@ -35,7 +35,7 @@ class RoomActivity : AppCompatActivity() {
                 putExtra(Intent.EXTRA_TEXT, shareText)
                 type = "text/plain"
             }
-
+            // 공유
             val shareIntent = Intent.createChooser(sendIntent, "공유하기")
             startActivity(shareIntent)
         }

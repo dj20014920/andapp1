@@ -146,21 +146,23 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private val receiptImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val source = ImageDecoder.createSource(contentResolver, uri)
-                ImageDecoder.decodeBitmap(source)
-            } else {
-                MediaStore.Images.Media.getBitmap(contentResolver, uri)
+        if (uri == null) return@registerForActivityResult
+        try {
+            // InputStream 방식이 더 안전함
+            val inputStream = contentResolver.openInputStream(uri)
+            val bitmap = inputStream?.use { BitmapFactory.decodeStream(it) }
+            if (bitmap == null) {
+                Toast.makeText(this, "이미지 파일을 읽을 수 없습니다.", Toast.LENGTH_SHORT).show()
+                return@registerForActivityResult
             }
-            ReceiptOcrProcessor.copyTrainedDataIfNeeded(this)
-            val text = ReceiptOcrProcessor.processReceipt(this, bitmap)
-            // 총액만 추출하여 메시지 생성
-            val total = ReceiptOcrProcessor.extractTotalAmount(text)
-            val message = "→ 총합: ${'$'}total원 / 인당: ${'$'}{total / 4}원"
-            sendChatMessage(message)
+            // 📌 카메라에서 찍은 사진과 똑같은 로직 사용
+            processOcrWithPeopleInput(bitmap)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "이미지 분석에 실패했습니다: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
+
     //카메라 촬영 후 처리
     private val cameraIntentLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK && cameraImageUri != null) {

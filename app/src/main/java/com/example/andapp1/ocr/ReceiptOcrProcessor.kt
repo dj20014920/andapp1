@@ -205,22 +205,38 @@ object ReceiptOcrProcessor {
 
     fun extractTotalAmount(text: String): Int? {
         val lines = text.lines()
+        val keyWords = listOf("총", "합계", "총액", "금액", "결제", "합", "받은금액", "받음", "받은 금액", "총금액")
+        val ignoreWords = listOf("승인", "카드", "사업자", "전화", "전화번호", "번호", "잔액", "포인트", "적립", "결제일", "VAT")
+        val amountPattern = Regex("""(\d{3,7})\s*(원|₩)?""")
 
-        val amountRegex = Regex("""((합\s*계|총\s*액|총\s*합|결제금액|총\s*금액)[^\d]{0,3})?(\d{2,6})\s*(원)?""")
+        data class Candidate(val amount: Int, val lineIdx: Int, val score: Int, val line: String)
+        val candidates = mutableListOf<Candidate>()
 
-        val candidates = mutableListOf<Int>()
+        for ((idx, lineRaw) in lines.withIndex()) {
+            val line = lineRaw.replace(",", "").replace(" ", "")
+            if (ignoreWords.any { it in line }) continue
 
-        for (line in lines) {
-            val match = amountRegex.find(line)
+            val match = amountPattern.find(line)
             if (match != null) {
-                val amount = match.groupValues[3].toIntOrNull()
-                if (amount != null) candidates.add(amount)
+                val value = match.groupValues[1].toIntOrNull() ?: continue
+                if (value < 1000) continue
+                if (value > 2000000) continue
+
+                var score = 0
+                if (keyWords.any { it in line }) score += 5
+                if (line.contains("원") || line.contains("₩")) score += 2
+                score += ((lines.size - idx) / 2)
+
+                candidates.add(Candidate(value, idx, score, lineRaw))
             }
         }
 
-        // 숫자 중 가장 큰 값을 총합으로 가정
-        return candidates.maxOrNull()
+        val best = candidates.sortedWith(compareByDescending<Candidate> { it.score }
+            .thenByDescending { it.amount }).firstOrNull()
+
+        return best?.amount
     }
+
     /**
      * 총합 및 인당 금액만 반환 (기본 포맷)
      */

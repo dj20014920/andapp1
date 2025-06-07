@@ -95,5 +95,9 @@ dependencies {
     implementation(project(":openCVLibrary"))
     implementation ("com.airbnb.android:lottie:6.4.0")
 
+    //채팅 메시지 알림
+    implementation ("com.google.firebase:firebase-messaging:24.0.0")
+
+
 
 }

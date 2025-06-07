@@ -26,6 +26,7 @@ import android.graphics.drawable.GradientDrawable
 import androidx.appcompat.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
+import com.google.firebase.messaging.FirebaseMessaging
 
 class MainActivity : AppCompatActivity() {
 
@@ -56,6 +57,13 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
             return
+        }
+
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            FirebaseDatabase.getInstance().getReference("users")
+                .child(currentUserId!!)
+                .child("fcmToken")
+                .setValue(token)
         }
 
         setContentView(binding.root)

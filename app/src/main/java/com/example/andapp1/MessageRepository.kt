@@ -8,6 +8,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.google.firebase.database.*
 import java.util.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class MessageRepository(private val roomCode: String) {
     private val messagesRef: DatabaseReference =
@@ -136,6 +138,38 @@ class MessageRepository(private val roomCode: String) {
         message.messageId = messageId
         messagesRef.child(messageId).setValue(message)
         Log.d("MessageRepository", "✅ Firebase 저장 완료: ${message.text}")
+
+        // === 🔔 최신 OkHttp 방식 ===
+        try {
+            val json = org.json.JSONObject().apply {
+                put("roomId", roomCode)
+                put("senderId", message.user.id)
+                put("senderName", message.user.name)
+                put("messageText", message.text ?: "")
+            }
+
+            // 최신 확장 함수 사용!
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val body = json.toString().toRequestBody(mediaType)
+
+            val request = okhttp3.Request.Builder()
+                .url("https://us-central1-andapp1-bcb40.cloudfunctions.net/sendChatNotification")
+                .post(body)
+                .build()
+
+            okhttp3.OkHttpClient().newCall(request).enqueue(object : okhttp3.Callback {
+                override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                    Log.e("푸시알림", "알림 함수 호출 실패", e)
+                }
+
+                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                    val resBody = response.body?.string() // ✅ .body() → .body
+                    Log.d("푸시알림", "알림 함수 응답: $resBody")
+                }
+            })
+        } catch (e: Exception) {
+            Log.e("푸시알림", "알림 함수 호출 중 예외", e)
+        }
     }
 
     fun cleanup() {

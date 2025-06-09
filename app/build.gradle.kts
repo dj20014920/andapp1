@@ -97,5 +97,7 @@ dependencies {
 
     //채팅 메시지 알림
     implementation ("com.google.firebase:firebase-messaging")
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
+
 
 }

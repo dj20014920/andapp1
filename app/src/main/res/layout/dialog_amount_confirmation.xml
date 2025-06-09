@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- OCR 인식 결과 표시 -->
+    <TextView
+        android:id="@+id/ocr_result_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/rounded_background"
+        android:padding="12dp"
+        android:text="OCR 인식 결과"
+        android:textColor="@color/gray_600"
+        android:textSize="12sp"
+        android:maxLines="4"
+        android:scrollbars="vertical"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 금액 입력 섹션 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="💰 인식된 금액"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/primary_color"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <EditText
+            android:id="@+id/amount_edit_text"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:hint="금액을 입력하세요"
+            android:inputType="number"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/button_background_secondary"
+            android:paddingHorizontal="12dp"
+            android:selectAllOnFocus="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="원"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary_color"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
+    <!-- 안내 메시지 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="⚠️ 금액이 정확하지 않다면 직접 수정해주세요"
+        android:textSize="12sp"
+        android:textColor="@color/warning_color"
+        android:gravity="center"
+        android:layout_marginTop="12dp" />
+
+</LinearLayout> 

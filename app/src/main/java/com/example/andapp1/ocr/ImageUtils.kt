@@ -676,29 +676,41 @@ object ImageUtils {
     fun preprocessImage(bitmap: Bitmap): Bitmap {
         return preprocessReceiptForAmount(bitmap)
     }
-}
 
-/**
- * 차세대 적응형 영수증 전처리 시스템
- * 자동 밝기 감지 + 동적 전처리 최적화
- */
-object AdaptiveReceiptProcessor {
-    private const val TAG = "AdaptiveProcessor"
-    
-    // 조명 상태 enum
-    enum class LightingCondition {
-        UNDEREXPOSED,    // 저조도
-        NORMAL,          // 정상
-        OVEREXPOSED      // 과노출
+    fun processReceiptImage(bitmap: Bitmap, lightThreshold: Double = 100.0): Bitmap {
+        val mat = Mat()
+        Utils.bitmapToMat(bitmap, mat)
+        
+        // 그레이스케일 변환
+        val gray = Mat()
+        Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY)
+        
+        // 가우시안 블러 적용
+        val blurred = Mat()
+        Imgproc.GaussianBlur(gray, blurred, Size(5.0, 5.0), 0.0)
+        
+        // 적응형 임계값 적용
+        val thresh = Mat()
+        Imgproc.adaptiveThreshold(blurred, thresh, 255.0, 
+            Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 11, 2.0)
+        
+        val result = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(thresh, result)
+        
+        mat.release()
+        gray.release()
+        blurred.release()
+        thresh.release()
+        
+        return result
     }
-    
+
     /**
-     * 메인 적응형 전처리 함수
-     * @param bitmap 원본 이미지
-     * @return 적응형 전처리된 이미지
+     * 고급 적응형 영수증 전처리 시스템
+     * 자동 밝기 감지 + 동적 전처리 최적화
      */
     fun processReceiptAdaptively(bitmap: Bitmap): Bitmap {
-        Log.d(TAG, "적응형 영수증 전처리 시작: ${bitmap.width}x${bitmap.height}")
+        Log.d("ImageUtils", "적응형 영수증 전처리 시작: ${bitmap.width}x${bitmap.height}")
         
         // 1. Bitmap을 Mat으로 변환
         val srcMat = Mat()
@@ -706,11 +718,11 @@ object AdaptiveReceiptProcessor {
         
         // 2. 자동 밝기 감지
         val lightingCondition = detectLightingCondition(srcMat)
-        Log.d(TAG, "감지된 조명 상태: $lightingCondition")
+        Log.d("ImageUtils", "감지된 조명 상태: $lightingCondition")
         
         // 3. 해상도 최적화
         val resizedMat = intelligentResize(srcMat)
-        Log.d(TAG, "해상도 최적화: ${resizedMat.cols()}x${resizedMat.rows()}")
+        Log.d("ImageUtils", "해상도 최적화: ${resizedMat.cols()}x${resizedMat.rows()}")
         
         // 4. 조명 상태에 따른 적응형 전처리
         val processedMat = when (lightingCondition) {
@@ -730,10 +742,17 @@ object AdaptiveReceiptProcessor {
         resizedMat.release()
         processedMat.release()
         
-        Log.d(TAG, "적응형 전처리 완료")
+        Log.d("ImageUtils", "적응형 전처리 완료")
         return resultBitmap
     }
-    
+
+    // 조명 상태 enum
+    enum class LightingCondition {
+        UNDEREXPOSED,    // 저조도
+        NORMAL,          // 정상
+        OVEREXPOSED      // 과노출
+    }
+
     /**
      * 자동 밝기 감지 (히스토그램 분석)
      */
@@ -767,7 +786,7 @@ object AdaptiveReceiptProcessor {
         val darkRatio = darkPixels / totalPixels
         val brightRatio = brightPixels / totalPixels
         
-        Log.d(TAG, "어두운 픽셀 비율: ${(darkRatio * 100).toInt()}%, 밝은 픽셀 비율: ${(brightRatio * 100).toInt()}%")
+        Log.d("ImageUtils", "어두운 픽셀 비율: ${(darkRatio * 100).toInt()}%, 밝은 픽셀 비율: ${(brightRatio * 100).toInt()}%")
         
         // 조명 상태 판단
         val condition = when {
@@ -782,12 +801,12 @@ object AdaptiveReceiptProcessor {
         
         return condition
     }
-    
+
     /**
      * 과노출 이미지 전처리 (밝은 곳)
      */
     private fun processOverexposed(src: Mat): Mat {
-        Log.d(TAG, "과노출 이미지 전처리 적용")
+        Log.d("ImageUtils", "과노출 이미지 전처리 적용")
         
         // 1. 그레이스케일 변환
         val grayMat = Mat()
@@ -819,12 +838,12 @@ object AdaptiveReceiptProcessor {
         
         return binary
     }
-    
+
     /**
      * 저조도 이미지 전처리 (어두운 곳)
      */
     private fun processUnderexposed(src: Mat): Mat {
-        Log.d(TAG, "저조도 이미지 전처리 적용")
+        Log.d("ImageUtils", "저조도 이미지 전처리 적용")
         
         // 1. 그레이스케일 변환
         val grayMat = Mat()
@@ -860,12 +879,12 @@ object AdaptiveReceiptProcessor {
         
         return binary
     }
-    
+
     /**
      * 정상 조명 이미지 전처리
      */
     private fun processNormal(src: Mat): Mat {
-        Log.d(TAG, "정상 조명 이미지 전처리 적용")
+        Log.d("ImageUtils", "정상 조명 이미지 전처리 적용")
         
         // 1. 그레이스케일 변환
         val grayMat = Mat()
@@ -891,7 +910,7 @@ object AdaptiveReceiptProcessor {
         
         return binary
     }
-    
+
     /**
      * 감마 보정 적용
      */
@@ -911,7 +930,7 @@ object AdaptiveReceiptProcessor {
         
         lookupTable.release()
     }
-    
+
     /**
      * 지능적 해상도 조정
      */
@@ -936,7 +955,46 @@ object AdaptiveReceiptProcessor {
         val resized = Mat()
         Imgproc.resize(src, resized, Size(targetSize.toDouble(), newHeight.toDouble()))
         
-        Log.d(TAG, "해상도 조정: ${originalWidth}x${originalHeight} → ${targetSize}x${newHeight}")
+        Log.d("ImageUtils", "해상도 조정: ${originalWidth}x${originalHeight} → ${targetSize}x${newHeight}")
         return resized
     }
+
+    /**
+     * 이미지 품질 분석
+     */
+    fun analyzeImageQuality(bitmap: Bitmap): ImageQuality {
+        val mat = Mat()
+        Utils.bitmapToMat(bitmap, mat)
+        
+        // 그레이스케일 변환
+        val gray = Mat()
+        Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY)
+        
+        // 밝기 분석
+        val mean = Core.mean(gray)
+        val brightness = mean.`val`[0] / 255.0
+        
+        // 선명도 분석을 위한 간단한 방법
+        val laplacian = Mat()
+        Imgproc.Laplacian(gray, laplacian, CvType.CV_64F)
+        
+        // 간단한 분산 계산
+        val meanLap = Core.mean(laplacian)
+        val sharpness = meanLap.`val`[0] / 1000.0 // 정규화
+        
+        // 해상도 분석
+        val resolution = minOf(bitmap.width, bitmap.height)
+        
+        mat.release()
+        gray.release()
+        laplacian.release()
+        
+        return ImageQuality(brightness, Math.abs(sharpness), resolution)
+    }
+
+    data class ImageQuality(
+        val brightness: Double,  // 0.0 ~ 1.0
+        val sharpness: Double,   // 높을수록 선명
+        val resolution: Int      // 최소 해상도
+    )
 } 

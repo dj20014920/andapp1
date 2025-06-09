@@ -21,7 +21,7 @@ data class ChatMessage(
     override fun getId(): String = messageId
 
     override fun getText(): String = text
-    override fun getUser(): IUser = user
+    override fun getUser(): Author = user
     override fun getCreatedAt(): Date = createdAt
     override fun getImageUrl(): String? = imageUrlValue
 

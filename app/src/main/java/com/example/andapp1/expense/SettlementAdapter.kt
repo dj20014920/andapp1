@@ -38,12 +38,12 @@ class SettlementAdapter : ListAdapter<SettlementItem, SettlementAdapter.ViewHold
             
             when (item.settlementType) {
                 SettlementType.RECEIVE -> {
-                    balanceText.text = "받을 금액: ${formatCurrency(item.balance)}"
+                    balanceText.text = "사용 금액: ${formatCurrency(item.balance)}"
                     balanceText.setTextColor(ContextCompat.getColor(itemView.context, R.color.success))
                     statusIcon.text = "💰"
                 }
                 SettlementType.PAY -> {
-                    balanceText.text = "줄 금액: ${formatCurrency(item.balance)}"
+                    balanceText.text = "사용 금액: ${formatCurrency(item.balance)}"
                     balanceText.setTextColor(ContextCompat.getColor(itemView.context, R.color.error_color))
                     statusIcon.text = "💸"
                 }

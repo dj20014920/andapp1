@@ -37,4 +37,19 @@
         <item name="android:windowBackground">@drawable/background_gradient</item>
     </style>
 
+    <!-- ✅ ROI 카메라용 테마 (액션바 없음) -->
+    <style name="Theme.AndApp1.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorPrimaryVariant">@color/primary_variant</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        
+        <item name="colorSecondary">@color/secondary_color</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+        
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowBackground">@color/camera_background</item>
+        <item name="android:statusBarColor">@color/camera_background</item>
+        <item name="android:navigationBarColor">@color/camera_background</item>
+    </style>
+
 </resources>

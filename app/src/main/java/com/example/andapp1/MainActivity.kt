@@ -106,33 +106,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun setupButtonColors() {
-        // 입장하기 버튼 - 그라디언트 배경
-        val primaryGradient = GradientDrawable().apply {
+        // 배경과 완전히 동일한 그라디언트 (background_gradient.xml과 같은 색상)
+        val backgroundGradient = GradientDrawable().apply {
             colors = intArrayOf(
-                Color.parseColor("#4facfe"),
-                Color.parseColor("#00c9ff"),
-                Color.parseColor("#0093E9")
+                Color.parseColor("#4facfe"),  // background_gradient_start
+                Color.parseColor("#0093E9")   // background_gradient_end
             )
-            orientation = GradientDrawable.Orientation.TL_BR
+            orientation = GradientDrawable.Orientation.TOP_BOTTOM
             cornerRadius = 12f * resources.displayMetrics.density
         }
-        binding.enterButton.background = primaryGradient
+        
+        // 입장하기 버튼 - 배경과 동일한 색상
+        binding.enterButton.background = backgroundGradient.constantState?.newDrawable()?.mutate()
         binding.enterButton.setTextColor(Color.WHITE)
 
-        // 방 생성하기 버튼 - 입장하기 버튼과 완전히 동일하게
-        val secondaryGradient = GradientDrawable().apply {
+        // 방 생성하기 버튼 - 배경과 동일한 색상
+        val backgroundGradient2 = GradientDrawable().apply {
             colors = intArrayOf(
-                Color.parseColor("#4facfe"),
-                Color.parseColor("#00c9ff"),
-                Color.parseColor("#0093E9")
+                Color.parseColor("#4facfe"),  // background_gradient_start
+                Color.parseColor("#0093E9")   // background_gradient_end
             )
-            orientation = GradientDrawable.Orientation.TL_BR
+            orientation = GradientDrawable.Orientation.TOP_BOTTOM
             cornerRadius = 12f * resources.displayMetrics.density
         }
-        binding.createRoomButton.background = secondaryGradient
+        binding.createRoomButton.background = backgroundGradient2
         binding.createRoomButton.setTextColor(Color.WHITE)
 
-        Log.d("MainActivity", "✅ 버튼 색상 강제 설정 완료 - 두 버튼 동일한 색상")
+        Log.d("MainActivity", "✅ 버튼 색상을 배경색과 동일하게 설정 완료")
     }
 
     private fun setupViewModel(userId: String) {

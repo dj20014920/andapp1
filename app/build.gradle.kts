@@ -47,11 +47,6 @@ android {
         jvmTarget = "17"
     }
 }
-// repositories {
-//     google()
-//     mavenCentral()
-//     maven { url = uri("https://devrepo.kakao.com/nexus/content/groups/public/") }
-// }
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
@@ -90,7 +85,6 @@ dependencies {
 
     // 내부 프로젝트
     implementation(project(":chatkit"))
-    // implementation("com.rmtheis:tess-two:9.1.0")
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.7.0")
     implementation(project(":openCVLibrary"))
     implementation ("com.airbnb.android:lottie:6.4.0")
@@ -99,5 +93,10 @@ dependencies {
     implementation ("com.google.firebase:firebase-messaging")
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
 
+    // CameraX 의존성
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
 
 }

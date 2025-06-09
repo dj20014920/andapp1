@@ -15,8 +15,8 @@
         android:icon="@drawable/ic_group"
         android:showAsAction="never" />
     <item
-        android:id="@+id/menu_receipt_ocr"
-        android:title="영수증 분석"
+        android:id="@+id/menu_travel_expense"
+        android:title="여행 경비"
         android:icon="@drawable/receipt"
         android:showAsAction="never" />
     <item

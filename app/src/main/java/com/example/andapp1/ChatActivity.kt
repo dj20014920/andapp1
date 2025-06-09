@@ -1,8 +1,10 @@
 package com.example.andapp1
 
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.ContentValues
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
@@ -33,6 +35,7 @@ import com.stfalcon.chatkit.messages.*
 import kotlinx.coroutines.launch
 import java.io.File
 import android.Manifest
+import android.content.Context
 import android.R.attr.bitmap
 import android.R.attr.data
 import android.R.id.message
@@ -46,7 +49,6 @@ import com.stfalcon.chatkit.commons.ImageLoader
 import org.opencv.android.OpenCVLoader
 import java.util.Date
 import androidx.lifecycle.Observer
-import android.content.Context
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.method.LinkMovementMethod
@@ -75,6 +77,27 @@ class ChatActivity : AppCompatActivity() {
     private var messagesObserver: Observer<List<ChatMessage>>? = null
     private var lastMessageId: String? = null
     private var shownMessageIds = mutableSetOf<String>()
+    
+    // OCR 결과 브로드캐스트 리시버
+    private val ocrMessageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            if (intent?.action == "com.example.andapp1.SEND_CHAT_MESSAGE") {
+                val message = intent.getStringExtra("message")
+                val chatId = intent.getStringExtra("chatId")
+                val source = intent.getStringExtra("source")
+                
+                Log.d("OCR_RECEIVER", "브로드캐스트 수신 - chatId: $chatId, source: $source")
+                
+                // 현재 채팅방과 일치하는 경우만 처리
+                if (message != null && chatId == viewModel.roomCode && source == "ocr") {
+                    Log.d("OCR_RECEIVER", "OCR 메시지 전송: $message")
+                    sendChatMessage(message)
+                    
+                    Toast.makeText(this@ChatActivity, "💰 영수증 정산 결과가 전송되었습니다", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     private fun openCamera() {
         // 📌 먼저 필요한 권한 목록
@@ -222,6 +245,15 @@ class ChatActivity : AppCompatActivity() {
         }
         Log.d("정렬확인", "reverseLayout = ${layoutManager.reverseLayout}, stackFromEnd = ${layoutManager.stackFromEnd}")
         binding.messagesList.layoutManager = layoutManager
+        
+        // OCR 브로드캐스트 리시버 등록
+        val filter = IntentFilter("com.example.andapp1.SEND_CHAT_MESSAGE")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(ocrMessageReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(ocrMessageReceiver, filter)
+        }
+        
         initializeAdapterAndListeners()
     }
 
@@ -548,7 +580,12 @@ class ChatActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.menu_receipt_ocr -> {
-                showOcrChoiceDialog()
+                // 새로운 OCR 액티비티로 이동 (채팅방 정보 전달)
+                val intent = Intent(this, com.example.andapp1.ocr.OcrActivity::class.java).apply {
+                    putExtra(com.example.andapp1.ocr.OcrActivity.EXTRA_CHAT_ID, viewModel.roomCode)
+                    putExtra(com.example.andapp1.ocr.OcrActivity.EXTRA_AUTO_SEND, false)
+                }
+                startActivity(intent)
                 true
             }
             R.id.menu_participants -> {
@@ -759,6 +796,15 @@ class ChatActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        
+        // OCR 브로드캐스트 리시버 해제
+        try {
+            unregisterReceiver(ocrMessageReceiver)
+            Log.d("ChatActivity_Lifecycle", "OCR 브로드캐스트 리시버 해제 완료")
+        } catch (e: Exception) {
+            Log.w("ChatActivity_Lifecycle", "OCR 브로드캐스트 리시버 해제 실패: ${e.message}")
+        }
+        
         Log.d("ChatActivity_Lifecycle", "onDestroy 호출됨", Exception("onDestroy Call Stack"))
     }
 

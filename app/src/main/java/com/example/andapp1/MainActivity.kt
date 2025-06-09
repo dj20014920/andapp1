@@ -44,6 +44,7 @@ class MainActivity : AppCompatActivity() {
 
         // 카카오 SDK 초기화
         KakaoSdk.init(this, getString(R.string.kakao_native_app_key))
+        printKeyHash(this) // 👈 여기서 호출
 
         // 사용자 정보 확인
         val prefs = getSharedPreferences("login", MODE_PRIVATE)
@@ -85,7 +86,25 @@ class MainActivity : AppCompatActivity() {
         // 디버깅용 해시키 출력
         getHashKey(this)
     }
+    fun printKeyHash(context: Context) {
+        try {
+            val info = context.packageManager.getPackageInfo(
+                context.packageName,
+                PackageManager.GET_SIGNATURES
+            )
 
+            info.signatures?.let { signatures ->
+                for (signature in signatures) {
+                    val md = MessageDigest.getInstance("SHA")
+                    md.update(signature.toByteArray())
+                    val hashKey = Base64.encodeToString(md.digest(), Base64.NO_WRAP)
+                    Log.d("HashKey", "keyhash: $hashKey")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("HashKey", "Error printing KeyHash: ${e.message}")
+        }
+    }
     private fun setupButtonColors() {
         // 입장하기 버튼 - 그라디언트 배경
         val primaryGradient = GradientDrawable().apply {

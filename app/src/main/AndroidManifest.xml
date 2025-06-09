@@ -102,6 +102,11 @@
             android:name=".PhotoGalleryActivity"
             android:exported="false"
             android:parentActivityName=".ChatActivity" />
+        <activity
+            android:name=".ocr.OcrActivity"
+            android:exported="false"
+            android:parentActivityName=".ChatActivity"
+            android:theme="@style/Theme.Chat.Default" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

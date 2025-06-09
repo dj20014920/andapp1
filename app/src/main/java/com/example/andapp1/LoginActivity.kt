@@ -1,8 +1,11 @@
 package com.example.andapp1
 
+import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Base64
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -18,6 +21,7 @@ import com.kakao.sdk.user.UserApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.security.MessageDigest
 
 // LoginActivity.kt
 class LoginActivity : AppCompatActivity() {
@@ -29,6 +33,7 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
         // 카카오 로그인 초기화
         KakaoSdk.init(this, getString(R.string.kakao_native_app_key))
+        printKeyHash(this) // 👈 여기서 호출
 
         binding.kakaoLoginButton.setOnClickListener {
             Log.d("Login", "카카오 로그인 버튼 클릭됨")
@@ -57,7 +62,25 @@ class LoginActivity : AppCompatActivity() {
             }
         }
     }
+    fun printKeyHash(context: Context) {
+        try {
+            val info = context.packageManager.getPackageInfo(
+                context.packageName,
+                PackageManager.GET_SIGNATURES
+            )
 
+            info.signatures?.let { signatures ->
+                for (signature in signatures) {
+                    val md = MessageDigest.getInstance("SHA")
+                    md.update(signature.toByteArray())
+                    val hashKey = Base64.encodeToString(md.digest(), Base64.NO_WRAP)
+                    Log.d("HashKey", "keyhash: $hashKey")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("HashKey", "Error printing KeyHash: ${e.message}")
+        }
+    }
     private fun fetchKakaoUserInfo() {
         UserApiClient.instance.me { user, error ->
             if (error != null) {

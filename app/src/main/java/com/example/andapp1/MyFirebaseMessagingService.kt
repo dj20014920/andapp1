@@ -31,11 +31,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         // 2. data 타입 메시지에도 알림 보내고 싶으면 아래 사용
-        // if (data.isNotEmpty()) {
-        //     val title = data["title"] ?: "새 메시지"
-        //     val message = data["body"] ?: ""
-        //     sendNotification(title, message)
-        // }
+        if (data.isNotEmpty()) {
+            val title = data["title"] ?: "새 메시지"
+            val message = data["body"] ?: ""
+            sendNotification(title, message)
+        }
+
     }
 
     private fun sendNotification(title: String, message: String) {

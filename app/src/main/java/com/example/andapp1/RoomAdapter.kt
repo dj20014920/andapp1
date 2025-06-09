@@ -14,6 +14,7 @@ class RoomAdapter(
     private val onItemClick: (Room) -> Unit,
     private val onMenuChangeNameClick: (Room) -> Unit,
     private val onMenuParticipantsClick: (Room) -> Unit,
+    private val onMenuInviteCodeClick: (Room) -> Unit,
     private val onMenuLeaveRoomClick: (Room) -> Unit,
     private val onFavoriteToggle: (Room, Boolean) -> Unit
 ) : RecyclerView.Adapter<RoomAdapter.RoomViewHolder>() {
@@ -88,6 +89,7 @@ class RoomAdapter(
                 room = room,
                 onChangeNameClick = { onMenuChangeNameClick(room) },
                 onParticipantsClick = { onMenuParticipantsClick(room) },
+                onInviteCodeClick = { onMenuInviteCodeClick(room) },
                 onLeaveRoomClick = { onMenuLeaveRoomClick(room) }
             )
         }

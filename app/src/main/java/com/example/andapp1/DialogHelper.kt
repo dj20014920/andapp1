@@ -18,6 +18,7 @@ object DialogHelper {
         room: Room,
         onChangeNameClick: () -> Unit,
         onParticipantsClick: () -> Unit,
+        onInviteCodeClick: () -> Unit,
         onLeaveRoomClick: () -> Unit
     ) {
         val popup = PopupMenu(context, anchorView)
@@ -31,6 +32,10 @@ object DialogHelper {
                 }
                 R.id.menu_participants -> {
                     onParticipantsClick()
+                    true
+                }
+                R.id.menu_invite_code -> {
+                    onInviteCodeClick();
                     true
                 }
                 R.id.menu_leave_room -> {
@@ -47,16 +52,40 @@ object DialogHelper {
     fun showCreateRoomDialog(context: Context, onCreate: (String, String) -> Unit) {
         val binding = CreateRoomDialogBinding.inflate(LayoutInflater.from(context))
 
-        AlertDialog.Builder(context)
-            .setTitle("채팅방 생성")
+        val dialog = AlertDialog.Builder(context)
             .setView(binding.root)
-            .setPositiveButton("생성") { _, _ ->
-                val roomName = binding.editRoomName.text.toString()
-                val currentTime = Util.getCurrentTime()
-                onCreate(roomName, currentTime)
+            .setPositiveButton("생성하기") { _, _ ->
+                val roomName = binding.editRoomName.text.toString().trim()
+                if (roomName.isNotEmpty()) {
+                    val currentTime = Util.getCurrentTime()
+                    onCreate(roomName, currentTime)
+                }
             }
             .setNegativeButton("취소", null)
-            .show()
+            .setCancelable(true)
+            .create()
+
+        // 🎨 다이얼로그 배경을 투명하게 설정 (커스텀 배경 사용)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        // 🎨 버튼 색상을 바다색 테마에 맞게 설정
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
+                setTextColor(context.getColor(R.color.primary_color))
+                textSize = 16f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.apply {
+                setTextColor(context.getColor(R.color.on_surface_variant))
+                textSize = 16f
+            }
+        }
+
+        dialog.show()
+
+        // 🎨 입력창에 포커스 주고 키보드 자동 표시
+        binding.editRoomName.requestFocus()
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
     }
 
     // 채팅방 이름 변경 다이얼로그

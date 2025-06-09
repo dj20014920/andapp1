@@ -10,9 +10,11 @@ object Util {
         val date = Date()
         return dateFormat.format(date)
     }
-    fun generateRandomCode(length: Int = 6): String {
+    fun generateRandomCode(): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        return (1..length).map { chars.random() }.joinToString("")
+        val part1 = (1..3).map { chars.random() }.joinToString("")
+        val part2 = (1..3).map { chars.random() }.joinToString("")
+        return "$part1-$part2" // ABC-123 형식
     }
     fun RoomEntity.toRoom(): Room {
         return Room(

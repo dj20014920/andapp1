@@ -103,7 +103,7 @@ public abstract class DemoMessagesActivity extends AppCompatActivity
         new Handler().postDelayed(() -> {
             ArrayList<Message> messages = MessagesFixtures.getMessages(lastLoadedDate);
             lastLoadedDate = messages.get(messages.size() - 1).getCreatedAt();
-            messagesAdapter.addToEnd(messages, false);
+            messagesAdapter.addToEnd(messages, true);
         }, 1000);
     }
 

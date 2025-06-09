@@ -2,23 +2,31 @@ package com.example.andapp1
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.os.Build
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
-import android.view.MotionEvent
+import android.view.*
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.EditText
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.andapp1.databinding.ActivityMapBinding
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.firebase.database.FirebaseDatabase
+import kotlin.jvm.java
+import android.widget.Button
+
 class MapActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMapBinding
+    private var menuVisible = false
+    private var menuView: View? = null
+    private lateinit var fabToggle: FloatingActionButton
+    private var lastLoadedUrl: String? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,105 +34,124 @@ class MapActivity : AppCompatActivity() {
         binding = ActivityMapBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            WebView.enableSlowWholeDocumentDraw()
-        }
-
-        val roomCode = intent.getStringExtra("roomCode")
-        // ✅ 키 값을 "mapUrl"로 맞춰줌
+        // 👉 지도 URL 복원 또는 초기화
         val restoreUrl = intent.getStringExtra("mapUrl")
         val targetUrl = restoreUrl ?: "https://m.map.naver.com/"
         Log.d("MapActivity", "🔥 로딩할 URL: $targetUrl")
 
         binding.webView.apply {
+            settings.javaScriptEnabled = true
+            settings.setSupportZoom(true)
             webChromeClient = object : WebChromeClient() {
                 override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
                     Log.d("JSConsole", "${consoleMessage?.message()} (line: ${consoleMessage?.lineNumber()})")
                     return true
                 }
             }
-
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
-                    Log.d("MapActivity", "✅ WebView 최종 로딩 완료: $url")
-
-                    restoreUrl?.let {
-                        Regex("""\?c=([0-9.]+),([0-9.]+),([0-9.]+)""").find(it)?.let { match ->
-                            val (lng, lat, zoom) = match.destructured
-                            tryRestoreMapLocation(lat, lng, zoom) // 💡 이미 아래에 정의한 함수
-                        }
-                    }
+                    super.onPageFinished(view, url)
+                    lastLoadedUrl = url
+                    Log.d("MapActivity", "✅ 마지막 로딩된 URL: $url")
                 }
             }
-
-            settings.javaScriptEnabled = true
-            settings.setSupportZoom(true)
             loadUrl(targetUrl)
         }
-        //플로트 버튼 구현 드래그,클릭 구분완료
-        binding.btnReturnToApp.setOnTouchListener { view, event ->
+
+        // 플로팅 토글 버튼
+        fabToggle = binding.fabToggle
+        fabToggle.setOnTouchListener { view, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    view.tag = Triple(event.rawX, event.rawY, false) // (x, y, isDragged=false)
+                    view.tag = Triple(event.rawX, event.rawY, false)
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val (startX, startY, _) = view.tag as Triple<Float, Float, Boolean>
                     val dx = event.rawX - startX
                     val dy = event.rawY - startY
-
-                    // 일정 거리 이상 움직이면 드래그로 판단
-                    val isDragged = dx * dx + dy * dy > 100 // 10px 이상 움직임
-
+                    val isDragged = dx * dx + dy * dy > 100
                     if (isDragged) {
                         view.x += dx
                         view.y += dy
-                        view.tag = Triple(event.rawX, event.rawY, true) // isDragged = true
+                        view.tag = Triple(event.rawX, event.rawY, true)
                     }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
                     val (_, _, isDragged) = view.tag as Triple<Float, Float, Boolean>
-                    if (!isDragged) {
-                        Log.d("MapActivity", "🧭 앱으로 돌아가기 버튼 클릭됨")
-
-                        // JavaScript 실행해서 중심 좌표와 줌 레벨 가져오기
-                        binding.webView.evaluateJavascript(
-                            """
-            (function() {
-                if (typeof map !== 'undefined') {
-                    var center = map.getCenter();
-                    var zoom = map.getZoom();
-                    return center.lat() + "," + center.lng() + "," + zoom;
-                } else {
-                    return "";
+                    if (!isDragged) showFloatingMenu()
+                    true
                 }
-            })();
-            """
-                        ) { result ->
-                            val clean = result.replace("\"", "") // 예: "37.56,126.97,18"
-                            Log.d("MapActivity", "📍 지도 좌표 반환: $clean")
+                else -> false
+            }
+        }
 
-                            val parts = clean.split(",")
-                            val mapUrl = if (parts.size == 3) {
-                                val lat = parts[0]
-                                val lng = parts[1]
-                                val zoom = parts[2]
-                                // ✅ 중심좌표 기반 네이버맵 URL 생성
-                                "https://m.map.naver.com/?c=${lng},${lat},${zoom},0,0,0,0"
-                            } else {
-                                "https://m.map.naver.com/"
-                            }
+        // 웹뷰 터치 시 메뉴 닫기
+        binding.webView.setOnTouchListener { _, event ->
+            if (menuVisible && event.action == MotionEvent.ACTION_DOWN) {
+                closeFloatingMenu()
+            }
+            false
+        }
+    }
 
-                            Log.d("MapActivity", "📍 전달할 URL: $mapUrl")
+    private fun showFloatingMenu() {
+        val root = findViewById<ViewGroup>(android.R.id.content)
+        if (menuVisible) return
 
-                            val intent = Intent(this, ChatActivity::class.java).apply {
-                                putExtra("mapUrl", mapUrl)
-                                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                            }
-                            startActivity(intent)
-                            finish()
-                        }
+        val menu = layoutInflater.inflate(R.layout.fab_menu_vertical, root, false)
+        menu.tag = "fab_menu"
+        menu.x = fabToggle.x
+        menu.y = fabToggle.y
+        menuView = menu
+
+        val fabShare = menu.findViewById<FloatingActionButton>(R.id.fab_share)
+        val fabScrap = menu.findViewById<FloatingActionButton>(R.id.fab_scrap)
+        val fabScrapList = menu.findViewById<FloatingActionButton>(R.id.fab_scrap_list)
+        val fabBack = menu.findViewById<FloatingActionButton>(R.id.fab_back)
+
+        fabShare.setOnClickListener { shareCurrentMapToChat() }
+        fabScrap.setOnClickListener { promptScrapNameAndSave() }
+        fabScrapList.setOnClickListener {
+            val roomCode = intent.getStringExtra("roomCode") ?: return@setOnClickListener
+            ScrapDialogHelper.showScrapListDialog(this, roomCode)
+        }
+        fabBack.setOnClickListener { returnToChat() }
+
+        val fabList = listOf(fabShare, fabScrap, fabScrapList, fabBack)
+        for (fab in fabList) {
+            fab.alpha = 0f
+            fab.translationY = -30f
+        }
+
+        root.addView(menu)
+        fabToggle.visibility = View.GONE
+        menuVisible = true
+
+        for ((index, fab) in fabList.withIndex()) {
+            fab.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay((index * 50).toLong())
+                .setDuration(200)
+                .start()
+        }
+
+        menu.setOnTouchListener { view, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    view.tag = Triple(event.rawX, event.rawY, false)
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val (startX, startY, _) = view.tag as Triple<Float, Float, Boolean>
+                    val dx = event.rawX - startX
+                    val dy = event.rawY - startY
+                    if (dx * dx + dy * dy > 100) {
+                        view.x += dx
+                        view.y += dy
+                        view.tag = Triple(event.rawX, event.rawY, true)
                     }
                     true
                 }
@@ -133,85 +160,103 @@ class MapActivity : AppCompatActivity() {
         }
     }
 
-    fun getMapCenterUrl(callback: (String) -> Unit) {
-        binding.webView.evaluateJavascript(
-            """
-        (function() {
-            try {
-                var map = window.__naverMap__; 
-                if (!map) return null;
-                var center = map.getCenter();
-                var zoom = map.getZoom();
-                return center.lat + "," + center.lng + "," + zoom;
-            } catch(e) {
-                return null;
-            }
-        })();
-        """.trimIndent()
-        ) { result ->
-            Log.d("MapActivity", "📍 JS 반환값: $result")
-            val cleaned = result.replace("\"", "")
-            val parts = cleaned.split(",")
-            if (parts.size == 3) {
-                val lat = parts[0]
-                val lng = parts[1]
-                val zoom = parts[2]
-                val newUrl = "https://m.map.naver.com/?c=${lng},${lat},${zoom},0,0,0,0"
-                callback(newUrl)
-            } else {
-                callback("https://m.map.naver.com/")
-            }
+    private fun closeFloatingMenu() {
+        val root = findViewById<ViewGroup>(android.R.id.content)
+        val menu = menuView ?: return
+        val fabList = listOf(
+            menu.findViewById<FloatingActionButton>(R.id.fab_share),
+            menu.findViewById<FloatingActionButton>(R.id.fab_scrap),
+            menu.findViewById<FloatingActionButton>(R.id.fab_scrap_list),
+            menu.findViewById<FloatingActionButton>(R.id.fab_back)
+        )
+
+        for ((index, fab) in fabList.withIndex()) {
+            fab.animate()
+                .alpha(0f)
+                .translationY(-30f)
+                .setDuration(150)
+                .setStartDelay((index * 50).toLong())
+                .withEndAction {
+                    if (index == fabList.lastIndex) {
+                        root.removeView(menu)
+                        menuView = null
+                        menuVisible = false
+                        fabToggle.visibility = View.VISIBLE
+                    }
+                }.start()
         }
     }
-    // TODO: 추후 BottomSheetDialog로 메뉴 구성
-    private fun showMapMenuDialog() {
-        // 임시: 토스트로 확인
-        Toast.makeText(this, "메뉴 버튼 클릭됨", Toast.LENGTH_SHORT).show()
-    }
 
-    // WebView 전체 캡처 함수 (3단계에서 사용)
-    fun captureWebView(): Bitmap {
-        val width = binding.webView.width
-        val height = binding.webView.contentHeight
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        binding.webView.draw(canvas)
-        return bitmap
-    }
-    // 클래스 내부 가장 아래쪽에 추가해줘 (MapActivity 클래스의 마지막 부분)
-    private fun tryRestoreMapLocation(lat: String, lng: String, zoom: String, retry: Int = 0) {
-        if (retry >= 10) {
-            Log.w("MapActivity", "❌ 복원 실패: map 객체 없음")
-            return
+    private fun returnToChat() {
+        val url = binding.webView.url ?: return  // 마지막으로 본 지도 URL
+        val intent = Intent(this, ChatActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra("mapUrl", url)  // 공유 버튼처럼 지도 URL 전달
         }
+        startActivity(intent)
+    }
 
-        val js = """
-        (function() {
-            try {
-                if (typeof map !== 'undefined' && map.setCenter) {
-                    var center = new naver.maps.LatLng($lat, $lng);
-                    map.setCenter(center);
-                    map.setZoom($zoom);
-                    console.log("✅ map 중심 복원 완료");
-                    return "ok";
-                } else {
-                    console.log("⚠️ map 객체 아직 없음 또는 setCenter 없음");
-                    return "retry";
+    private fun shareCurrentMapToChat() {
+        val url = lastLoadedUrl ?: return
+        val intent = Intent(this, ChatActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            putExtra("mapUrl", url) // 지도 URL 전달
+            putExtra("scrapText", url) // 추가: 메시지로 전송할 URL
+        }
+        startActivity(intent)
+    }
+
+    private fun promptScrapNameAndSave() {
+        val roomCode = intent.getStringExtra("roomCode") ?: return
+        val dialogView = layoutInflater.inflate(R.layout.dialog_scrap_input, null)
+        val editText = dialogView.findViewById<EditText>(R.id.editScrapName)
+        val saveButton = dialogView.findViewById<Button>(R.id.btnSaveScrap)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("스크랩 이름")
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        saveButton.setOnClickListener {
+            val name = editText.text.toString().trim()
+            if (name.isEmpty()) {
+                Toast.makeText(this, "⚠️ 장소 이름을 입력해주세요", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val url = binding.webView.url ?: return@setOnClickListener
+            val scrap = ScrapItem(
+                name = name,
+                url = url,
+                thumbnailUrl = "https://example.com/default-thumbnail.png",
+                description = ""
+            )
+
+            FirebaseDatabase.getInstance()
+                .getReference("scraps")
+                .child(roomCode)
+                .push()
+                .setValue(scrap)
+                .addOnSuccessListener {
+                    Toast.makeText(this, "✅ 스크랩 저장됨", Toast.LENGTH_SHORT).show()
+
+                    // 자동 메시지 전송
+                    val messageIntent = Intent(this, ChatActivity::class.java).apply {
+                        putExtra("roomCode", roomCode)
+                        putExtra("mapUrl", url)
+                        putExtra("scrapText", "📌 ${name}을(를) 스크랩했어요!\n$url")
+                        addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    }
+                    startActivity(messageIntent)
                 }
-            } catch (e) {
-                console.log("❌ JS 오류: " + e.message);
-                return "retry";
-            }
-        })();
-    """.trimIndent()
+                .addOnFailureListener {
+                    Toast.makeText(this, "❌ 저장 실패", Toast.LENGTH_SHORT).show()
+                }
 
-        binding.webView.evaluateJavascript(js) { result ->
-            Log.d("MapActivity", "📍 JS 복원 결과: $result")
-            if (result.contains("retry")) {
-                binding.webView.postDelayed({
-                    tryRestoreMapLocation(lat, lng, zoom, retry + 1)
-                }, 800)
-            }
+            dialog.dismiss()
         }
+
+        dialog.show()
     }
 }

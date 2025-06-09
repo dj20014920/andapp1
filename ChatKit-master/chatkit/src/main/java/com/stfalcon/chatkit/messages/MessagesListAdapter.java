@@ -198,6 +198,15 @@ public class MessagesListAdapter<MESSAGE extends IMessage>
         notifyItemRangeInserted(oldSize, items.size() - oldSize);
     }
 
+    public void setItems(List<MESSAGE> messages) {
+        items.clear(); // 기존 메시지 전체 제거
+        for (MESSAGE message : messages) {
+            items.add(new Wrapper<>(message)); // 날짜 헤더 없이 메시지만 추가
+        }
+        notifyDataSetChanged();
+    }
+
+
     /**
      * Updates message by its id.
      *

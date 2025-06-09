@@ -34,14 +34,22 @@ class ChatViewModel(val roomCode: String,
             }
 
             if (currentUser != null) {
+                // ✅ 디버깅 로그 추가
+                Log.d("ProfileDebug", "=== 메시지 전송 시 프로필 디버깅 ===")
+                Log.d("ProfileDebug", "사용자 ID: ${currentUser.id}")
+                Log.d("ProfileDebug", "사용자 닉네임: ${currentUser.nickname}")
+                Log.d("ProfileDebug", "프로필 이미지 URL: ${currentUser.profileImageUrl}")
+
                 val user = Author(
                     id = currentUser.id,
                     name = currentUser.nickname ?: "알 수 없음",
-                    avatar = null
+                    avatar = currentUser.profileImageUrl // ✅ 프로필 이미지 URL 설정
                 )
 
+                Log.d("ProfileDebug", "Author avatar 설정됨: ${user.getAvatar()}")
+
                 val message = ChatMessage(
-                    id = System.currentTimeMillis().toString(),
+                    messageId = "",
                     text = content,
                     user = user,
                     createdAt = Date()
@@ -53,10 +61,11 @@ class ChatViewModel(val roomCode: String,
             }
         }
     }
+
     fun sendSystemMessage(text: String) {
         viewModelScope.launch {
             val message = ChatMessage(
-                id = System.currentTimeMillis().toString(),
+                messageId = "",
                 text = text,
                 user = Author(
                     id = "system",
@@ -70,8 +79,44 @@ class ChatViewModel(val roomCode: String,
         }
     }
 
+    fun sendMapUrlMessage(mapUrl: String) {
+        viewModelScope.launch {
+            val currentUser = withContext(Dispatchers.IO) {
+                userDao.getUser()
+            }
+
+            if (currentUser != null) {
+                val user = Author(
+                    id = currentUser.id,
+                    name = currentUser.nickname ?: "알 수 없음",
+                    avatar = currentUser.profileImageUrl // ✅ 프로필 이미지 URL 설정
+                )
+
+                val message = ChatMessage(
+                    messageId = "",
+                    text = "🗺️ 장소를 공유했어요!\n$mapUrl", // ✅ URL도 텍스트에 포함
+                    user = user,
+                    imageUrlValue= null,
+                    mapUrl = mapUrl,
+                    createdAt = Date()
+                )
+                Log.d("ChatViewModel", "📤 지도 URL 전송: $mapUrl")
+                messageRepository.sendMessage(message)
+            } else {
+                Log.e("ChatViewModel", "❌ 사용자 정보 없음")
+            }
+        }
+    }
+
+    fun sendMessage(message: ChatMessage) {
+        viewModelScope.launch {
+            messageRepository.sendMessage(message)
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         messageRepository.cleanup()
     }
+
 }

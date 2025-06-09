@@ -7,12 +7,34 @@
 
     <!-- ✅ 앱 전체에서 사용하는 메인 테마 -->
     <style name="Theme.AndApp1" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- 상단바 배경을 흰색 -->
-        <item name="colorPrimary">@android:color/white</item>
-        <item name="colorPrimaryVariant">@android:color/white</item>
-        <item name="colorOnPrimary">@android:color/black</item> <!-- 텍스트 색 -->
-        <!-- 상태바 아이콘 검은색 (API 23 이상) -->
-        <item name="android:windowLightStatusBar">true</item>
+        <!-- 기본 색상 설정 -->
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorPrimaryVariant">@color/primary_variant</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+
+        <item name="colorSecondary">@color/secondary_color</item>
+        <item name="colorSecondaryVariant">@color/secondary_variant</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+
+        <item name="colorSurface">@color/surface_color</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+
+        <item name="colorError">@color/error_color</item>
+        <item name="colorOnError">@color/on_error</item>
+
+        <!-- ✅ TextInputLayout이 요구하는 필수 텍스트 스타일들 -->
+        <item name="textAppearanceCaption">@style/TextAppearance.MaterialComponents.Caption</item>
+        <item name="textAppearanceBody1">@style/TextAppearance.MaterialComponents.Body1</item>
+        <item name="textAppearanceBody2">@style/TextAppearance.MaterialComponents.Body2</item>
+        <item name="textAppearanceSubtitle1">@style/TextAppearance.MaterialComponents.Subtitle1</item>
+        <item name="textAppearanceSubtitle2">@style/TextAppearance.MaterialComponents.Subtitle2</item>
+
+        <!-- 상태바 설정 -->
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:statusBarColor" tools:targetApi="l">@android:color/transparent</item>
+
+        <!-- 윈도우 배경 -->
+        <item name="android:windowBackground">@drawable/background_gradient</item>
     </style>
 
 </resources>

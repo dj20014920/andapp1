@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/splashRoot"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:background="@drawable/splash_gradients">
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/cloudsLottie"
+        android:layout_width="300dp"
+        android:layout_height="180dp"
+        android:layout_gravity="center_horizontal"
+        app:lottie_fileName="cloud.json"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true"
+        android:layout_marginBottom="32dp" />
+
+    <TextView
+        android:id="@+id/tvAppTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Travel Maker"
+        android:textSize="36sp"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
+        android:alpha="0"/>
+
+    <TextView
+        android:id="@+id/tvSlogan"
+        android:text="친구들과 함께 떠나는 즐거운 여행"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:textColor="#CCFFFFFF"
+        android:gravity="center"
+        android:alpha="0"
+        android:layout_marginTop="8dp"/>
+
+</LinearLayout>

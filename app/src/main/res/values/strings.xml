@@ -1,4 +1,9 @@
 <resources>
-    <string name="app_name">AndApp1</string>
+    <string name="app_name">Travel Maker</string>
     <string name="kakao_native_app_key">ffb04602d82950f1b00de0324a38f023</string>
+    <string name="messages_list_description">채팅 메시지 목록</string>
+    <string name="send_photo">사진 보내기</string>
+    <string name="image_message">이미지 메시지</string>
+
+
 </resources>

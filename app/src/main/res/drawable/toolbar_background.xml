@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 더 연한 파란색 그라디언트 -->
+    <gradient
+        android:startColor="#5C9BD1"
+        android:centerColor="#4A90E2"
+        android:endColor="#357ABD"
+        android:angle="90"
+        android:type="linear" />
+</shape>

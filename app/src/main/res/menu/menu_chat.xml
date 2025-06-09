@@ -14,4 +14,14 @@
         android:title="참여자 목록"
         android:icon="@drawable/ic_group"
         android:showAsAction="never" />
+    <item
+        android:id="@+id/menu_receipt_ocr"
+        android:title="영수증 분석"
+        android:icon="@drawable/receipt"
+        android:showAsAction="never" />
+    <item
+        android:id="@+id/menu_photo_gallery"
+        android:title="사진첩"
+        android:icon="@drawable/ic_camera"
+        android:showAsAction="never" />
 </menu>

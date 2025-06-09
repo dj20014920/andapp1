@@ -12,6 +12,10 @@
         android:title="참여자 목록"
         android:showAsAction="never" />
 
+    <item
+        android:id="@+id/menu_invite_code"
+        android:title="초대 코드" />
+
     <!-- 나가기 -->
     <item
         android:id="@+id/menu_leave_room"

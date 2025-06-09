@@ -112,6 +112,16 @@
             android:exported="false"
             android:parentActivityName=".ChatActivity"
             android:theme="@style/Theme.Chat.Default" />
+        <activity
+            android:name=".ocr.RoiImageEditorActivity"
+            android:exported="false"
+            android:parentActivityName=".ocr.OcrActivity"
+            android:theme="@style/Theme.Chat.Default" />
+        <activity
+            android:name=".ocr.RoiCameraActivity"
+            android:exported="false"
+            android:parentActivityName=".ocr.OcrActivity"
+            android:theme="@style/Theme.Chat.Default" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

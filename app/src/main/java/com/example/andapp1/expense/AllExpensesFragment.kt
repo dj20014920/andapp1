@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.andapp1.DialogHelper
 import com.example.andapp1.R
 import com.example.andapp1.databinding.FragmentAllExpensesBinding
 import com.example.andapp1.ocr.OcrActivity
@@ -143,24 +144,24 @@ class AllExpensesFragment : Fragment() {
             "✏️ 직접 입력"
         )
         
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("💸 경비 추가 방법")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0, 1 -> {
-                        val intent = Intent(requireContext(), OcrActivity::class.java).apply {
-                            putExtra(OcrActivity.EXTRA_CHAT_ID, chatId)
-                            putExtra(OcrActivity.EXTRA_AUTO_SEND, false)
-                        }
-                        startActivityForResult(intent, REQUEST_OCR_RESULT)
+        DialogHelper.showStyledChoiceDialog(
+            context = requireContext(),
+            title = "💸 경비 추가 방법",
+            options = options
+        ) { which ->
+            when (which) {
+                0, 1 -> {
+                    val intent = Intent(requireContext(), OcrActivity::class.java).apply {
+                        putExtra(OcrActivity.EXTRA_CHAT_ID, chatId)
+                        putExtra(OcrActivity.EXTRA_AUTO_SEND, false)
                     }
-                    2 -> {
-                        showManualInputDialog()
-                    }
+                    startActivityForResult(intent, REQUEST_OCR_RESULT)
+                }
+                2 -> {
+                    showManualInputDialog()
                 }
             }
-            .setNegativeButton("취소", null)
-            .show()
+        }
     }
     
     private fun showManualInputDialog(prefilledAmount: Int = 0, prefilledDescription: String = "") {

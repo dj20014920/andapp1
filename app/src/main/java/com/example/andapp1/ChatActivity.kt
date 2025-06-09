@@ -784,13 +784,14 @@ class ChatActivity : AppCompatActivity() {
 
             // 사진 버튼
             binding.btnSendPhoto.setOnClickListener {
-                val options = arrayOf("사진 촬영", "갤러리에서 선택")
-                AlertDialog.Builder(this@ChatActivity)
-                    .setTitle("여행 경비 방법 선택")
-                    .setItems(options) { _, which ->
-                        if (which == 0) openCamera() else openGallery()
-                    }
-                    .show()
+                val options = arrayOf("📸 사진 촬영", "🖼️ 갤러리에서 선택")
+                DialogHelper.showStyledChoiceDialog(
+                    context = this@ChatActivity,
+                    title = "사진 전송 방법 선택",
+                    options = options
+                ) { which ->
+                    if (which == 0) openCamera() else openGallery()
+                }
             }
             // 메시지 옵저빙 시작
             observeMessages()
@@ -880,23 +881,23 @@ class ChatActivity : AppCompatActivity() {
     private fun showOcrChoiceDialog() {
         val options = arrayOf("📸 사진 촬영", "🖼️ 갤러리에서 선택")
 
-        AlertDialog.Builder(this)
-            .setTitle("여행 경비 방법 선택")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> {
-                        Log.d("OCR_CAMERA", "📸 사진 촬영 선택됨")
-                        openOcrCamera()
-                    }
+        DialogHelper.showStyledChoiceDialog(
+            context = this,
+            title = "영수증 인식 방법 선택",
+            options = options
+        ) { which ->
+            when (which) {
+                0 -> {
+                    Log.d("OCR_CAMERA", "📸 사진 촬영 선택됨")
+                    openOcrCamera()
+                }
 
-                    1 -> {
-                        Log.d("OCR_CAMERA", "🖼️ 사진 선택 선택됨")
-                        receiptImageLauncher.launch("image/*")
-                    }
+                1 -> {
+                    Log.d("OCR_CAMERA", "🖼️ 사진 선택 선택됨")
+                    receiptImageLauncher.launch("image/*")
                 }
             }
-            .setNegativeButton("취소", null)
-            .show()
+        }
     }
 
     private fun processOcrWithPeopleInput(bitmap: Bitmap) {

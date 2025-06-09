@@ -172,4 +172,45 @@
         <item name="android:gravity">center</item>
     </style>
 
+    <!-- 🎨 통일된 다이얼로그 스타일 -->
+    <style name="AppDialog" parent="Theme.Material3.DayNight.Dialog">
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorSecondary">@color/secondary_color</item>
+        <item name="android:windowBackground">@drawable/dialog_background_pastel</item>
+        <item name="android:textColorPrimary">@color/text_primary_pastel</item>
+        <item name="android:textColorSecondary">@color/text_secondary_pastel</item>
+        <item name="materialButtonStyle">@style/DialogButton</item>
+    </style>
+
+    <style name="DialogButton" parent="Widget.Material3.Button.TonalButton">
+        <item name="cornerRadius">12dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="backgroundTint">@color/pastel_blue_100</item>
+        <item name="android:textColor">@color/text_primary_pastel</item>
+    </style>
+
+    <style name="DialogTitle" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/text_primary_pastel</item>
+        <item name="android:gravity">center</item>
+        <item name="android:padding">16dp</item>
+    </style>
+
+    <style name="DialogMessage" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/text_secondary_pastel</item>
+        <item name="android:gravity">center</item>
+        <item name="android:padding">12dp</item>
+    </style>
+
+    <!-- 메뉴 스타일 -->
+    <style name="AppMenu" parent="Widget.Material3.PopupMenu">
+        <item name="android:popupBackground">@drawable/popup_menu_background_pastel</item>
+        <item name="android:textColor">@color/text_primary_pastel</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
 </resources>

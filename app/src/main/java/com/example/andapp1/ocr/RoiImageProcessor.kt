@@ -201,12 +201,18 @@ object RoiImageProcessor {
         val roiWidth = roiRatio.width() * imageWidth
         val roiHeight = roiRatio.height() * imageHeight
         
-        val isValid = roiWidth >= 100 && roiHeight >= 50 &&  // 최소 크기
+        // ⭐ OCR 인식률 개선: 최소 크기를 대폭 증가
+        val isValid = roiWidth >= 300 && roiHeight >= 150 &&  // 최소 크기 300x150 (기존 100x50)
                      roiRatio.width() <= 1.0f && roiRatio.height() <= 1.0f &&  // 최대 크기
                      roiRatio.left >= 0f && roiRatio.top >= 0f &&  // 경계 확인
                      roiRatio.right <= 1.0f && roiRatio.bottom <= 1.0f
         
         Log.d(TAG, "ROI 영역 검증 결과: $isValid (${roiWidth.toInt()}x${roiHeight.toInt()})")
+        
+        if (!isValid && (roiWidth < 300 || roiHeight < 150)) {
+            Log.w(TAG, "ROI 영역이 너무 작습니다. OCR 인식을 위해 최소 300x150 필요")
+        }
+        
         return isValid
     }
 } 

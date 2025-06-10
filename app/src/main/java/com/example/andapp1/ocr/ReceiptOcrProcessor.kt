@@ -137,10 +137,9 @@ object ReceiptOcrProcessor {
             }
 
             Log.d(TAG, "Tesseract setVariable 및 setPageSegMode 설정 시도")
-            tess.setVariable("tessedit_char_whitelist", "0123456789,원합계총액금액가격세부카드현금" + 
-                                                                 "받은받음지불지불액신용체크네이버페이카카오페이토스" +
-                                                                 "서비스공급공급가부가가치포인트결제승인취소환불할인" + 
-                                                                 "().:- ")
+            // 한국 영수증 핵심 금액 인식을 위한 최적화된 whitelist
+            // Main 브랜치 방식: 숫자, 쉼표, 핵심 금액 관련 한글만 허용
+            tess.setVariable("tessedit_char_whitelist", "0123456789,원합계총액금액")
             tess.pageSegMode = TessBaseAPI.PageSegMode.PSM_SINGLE_COLUMN
             Log.d(TAG, "Tesseract 이미지 설정 시도")
             tess.setImage(processedBmp)
@@ -183,41 +182,64 @@ object ReceiptOcrProcessor {
     }
 
     /**
-     * OCR 텍스트에서 '총액', '합계', '금액' 레이블 기반 숫자 추출.
-     * 레이블 추출 실패 시 robust 방식으로 최대값 반환.
+     * 한국 영수증의 핵심 금액 부분 추출 최적화
+     * 영수증 하단의 총액/합계 중심으로 인식
      */
     fun extractTotalAmount(text: String): Int? {
-        val lines = text.lines()
-        val keyWords = listOf("총", "합계", "총액", "금액", "결제", "합", "받은금액", "받음", "받은 금액", "총금액")
-        val ignoreWords = listOf("승인", "카드", "사업자", "전화", "전화번호", "번호", "잔액", "포인트", "적립", "결제일", "VAT")
-        val amountPattern = Regex("""(\d{3,7})\s*(원|₩)?""")
-
-        data class Candidate(val amount: Int, val lineIdx: Int, val score: Int, val line: String)
-        val candidates = mutableListOf<Candidate>()
-
-        for ((idx, lineRaw) in lines.withIndex()) {
-            val line = lineRaw.replace(",", "").replace(" ", "")
-            if (ignoreWords.any { it in line }) continue
-
-            val match = amountPattern.find(line)
-            if (match != null) {
-                val value = match.groupValues[1].toIntOrNull() ?: continue
-                if (value < 1000) continue
-                if (value > 2000000) continue
-
-                var score = 0
-                if (keyWords.any { it in line }) score += 5
-                if (line.contains("원") || line.contains("₩")) score += 2
-                score += ((lines.size - idx) / 2)
-
-                candidates.add(Candidate(value, idx, score, lineRaw))
+        val lines = text.lines().filter { it.isNotBlank() }
+        
+        // 한국 영수증의 핵심 키워드 (우선순위별)
+        val primaryKeywords = listOf("총액", "합계", "총금액", "금액")
+        val secondaryKeywords = listOf("총", "합", "결제")
+        
+        // 영수증 하단부터 검색 (총액은 보통 하단에 위치)
+        val reversedLines = lines.reversed()
+        
+        // 1차: 핵심 키워드와 함께 나오는 금액 검색
+        for (line in reversedLines) {
+            val cleanLine = line.replace(",", "").replace(" ", "")
+            
+            // 주요 키워드가 포함된 라인에서 금액 추출
+            if (primaryKeywords.any { cleanLine.contains(it) }) {
+                val amountMatch = Regex("""(\d{3,7})""").find(cleanLine)
+                amountMatch?.let { match ->
+                    val amount = match.value.toIntOrNull()
+                    if (amount != null && amount >= 1000 && amount <= 1000000) {
+                        Log.d(TAG, "핵심 키워드로 금액 발견: ${amount}원 (라인: $line)")
+                        return amount
+                    }
+                }
             }
         }
-
-        val best = candidates.sortedWith(compareByDescending<Candidate> { it.score }
-            .thenByDescending { it.amount }).firstOrNull()
-
-        return best?.amount
+        
+        // 2차: 보조 키워드 검색
+        for (line in reversedLines) {
+            val cleanLine = line.replace(",", "").replace(" ", "")
+            
+            if (secondaryKeywords.any { cleanLine.contains(it) }) {
+                val amountMatch = Regex("""(\d{3,7})""").find(cleanLine)
+                amountMatch?.let { match ->
+                    val amount = match.value.toIntOrNull()
+                    if (amount != null && amount >= 1000 && amount <= 500000) {
+                        Log.d(TAG, "보조 키워드로 금액 발견: ${amount}원 (라인: $line)")
+                        return amount
+                    }
+                }
+            }
+        }
+        
+        // 3차: 가장 큰 금액 반환 (fallback)
+        val allAmounts = lines.mapNotNull { line ->
+            val cleanLine = line.replace(",", "").replace(" ", "")
+            Regex("""(\d{3,7})""").find(cleanLine)?.value?.toIntOrNull()
+        }.filter { it >= 1000 && it <= 500000 }
+        
+        val maxAmount = allAmounts.maxOrNull()
+        if (maxAmount != null) {
+            Log.d(TAG, "최대 금액으로 선택: ${maxAmount}원")
+        }
+        
+        return maxAmount
     }
 
     /**

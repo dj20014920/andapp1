@@ -505,7 +505,16 @@ class ChatActivity : AppCompatActivity() {
             toolbarParams.topMargin = statusBarHeight
             binding.toolbar.layoutParams = toolbarParams
             
+            // ⭐ 하단 입력창에 네비게이션 바 높이만큼 패딩 추가
+            binding.inputBar.setPadding(
+                binding.inputBar.paddingLeft,
+                binding.inputBar.paddingTop,
+                binding.inputBar.paddingRight,
+                binding.inputBar.paddingBottom + navigationBarHeight
+            )
+            
             Log.d("SystemBarInsets", "Toolbar 마진 조정 완료 - 상단: ${statusBarHeight}px")
+            Log.d("SystemBarInsets", "입력창 패딩 조정 완료 - 하단: ${navigationBarHeight}px")
             Log.d("SystemBarInsets", "동적 시스템 바 여백 조정 완료")
             
             // 원본 인셋 반환

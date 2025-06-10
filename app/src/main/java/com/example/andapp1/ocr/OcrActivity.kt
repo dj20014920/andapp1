@@ -37,6 +37,8 @@ import com.example.andapp1.expense.ExpenseItem
 import android.os.Handler
 import android.os.Looper
 import android.app.Activity
+import android.view.inputmethod.InputMethodManager
+import android.content.Context
 
 /**
  * OCR 기능을 제공하는 Activity
@@ -214,15 +216,15 @@ class OcrActivity : AppCompatActivity() {
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
             if (result.resultCode == RESULT_OK) {
-                // photoUri에서 고해상도 이미지를 불러옴
+                // photoUri에서 고해상도 이미지를 불러와서 바로 편집뷰로 이동
                 photoUri?.let { uri ->
                     try {
-                        val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri)
-                        Log.d(TAG, "카메라에서 고해상도 이미지 획득: ${bitmap.width}x${bitmap.height}")
-                        processImage(bitmap)
+                        Log.d(TAG, "카메라에서 고해상도 이미지 획득: $uri")
+                        // 바로 ROI 이미지 편집기로 이동하여 사용자가 금액 부분을 선택하도록 함
+                        launchRoiImageEditor(uri)
                     } catch (e: Exception) {
-                        Log.e(TAG, "카메라 이미지 로드 실패: ${e.message}", e)
-                        showError("이미지를 불러올 수 없습니다: ${e.message}")
+                        Log.e(TAG, "카메라 이미지 처리 실패: ${e.message}", e)
+                        showError("이미지를 처리할 수 없습니다: ${e.message}")
                     }
                 } ?: run {
                     Log.e(TAG, "카메라 촬영 후 photoUri가 null입니다.")
@@ -339,19 +341,15 @@ class OcrActivity : AppCompatActivity() {
         
         cameraButton.setOnClickListener {
             Log.d(TAG, "카메라 버튼 클릭됨!")
-            // ROI 기반 카메라 실행
-            launchRoiCamera()
+            // 일반 카메라로 촬영 후 편집뷰로 이동
+            requestCameraPermissionAndLaunch()
         }
         
         galleryButton.setOnClickListener {
             Log.d(TAG, "갤러리 버튼 클릭됨!")
             requestStoragePermissionAndLaunch()
         }
-        
-        sendToChatButton.setOnClickListener {
-            Log.d(TAG, "채팅방 전송 버튼 클릭됨!")
-            viewModel.sendToChat(chatId, includeDetails = true)
-        }
+
         
         retryButton.setOnClickListener {
             Log.d(TAG, "재시도 버튼 클릭됨!")
@@ -380,10 +378,7 @@ class OcrActivity : AppCompatActivity() {
                     Log.d(TAG, "OCR 상태: 성공 - ${state.result.getFormattedAmount()}")
                     showSuccessState(state.result)
                     
-                    // 자동 전송 옵션이 켜져있으면 바로 전송
-                    if (autoSend) {
-                        viewModel.sendToChat(chatId, includeDetails = true)
-                    }
+
                 }
                 is OcrState.Error -> {
                     Log.d(TAG, "OCR 상태: 오류 - ${state.message}")
@@ -401,29 +396,7 @@ class OcrActivity : AppCompatActivity() {
             }
         }
         
-        // 채팅 전송 결과 관찰
-        viewModel.chatSendResult.observe(this) { result ->
-            when (result) {
-                is ChatSendResult.Loading -> {
-                    Log.d(TAG, "채팅 전송: 로딩")
-                    sendToChatButton.isEnabled = false
-                    sendToChatButton.text = "전송 중..."
-                }
-                is ChatSendResult.Success -> {
-                    Log.d(TAG, "채팅 전송: 성공")
-                    showChatSendSuccess(result.message)
-                }
-                is ChatSendResult.Error -> {
-                    Log.d(TAG, "채팅 전송: 오류 - ${result.message}")
-                    showChatSendError(result.message)
-                }
-                null -> {
-                    // 초기 상태
-                    sendToChatButton.isEnabled = true
-                    sendToChatButton.text = "채팅방에 전송"
-                }
-            }
-        }
+
     }
     
     /**
@@ -827,45 +800,57 @@ class OcrActivity : AppCompatActivity() {
     }
     
     /**
-     * 사용처 이름 입력 다이얼로그
+     * 사용처 이름 입력 다이얼로그 (개선된 UI)
      */
     private fun showExpenseNameDialog(amount: Int, originalOcrText: String) {
-        val nameEditText = EditText(this).apply {
-            hint = "사용처 입력 (예: 스타벅스, 롯데리아, GS25...)"
-            inputType = android.text.InputType.TYPE_CLASS_TEXT
-            maxLines = 1
-            setPadding(20, 20, 20, 20)
+        // 커스텀 다이얼로그 뷰 생성
+        val dialogView = layoutInflater.inflate(R.layout.dialog_expense_name_input, null)
+        
+        // 뷰 요소들 찾기
+        val amountText = dialogView.findViewById<TextView>(R.id.tvAmount)
+        val nameEditText = dialogView.findViewById<EditText>(R.id.etExpenseName)
+        val hintText = dialogView.findViewById<TextView>(R.id.tvHint)
+        
+        // 금액 설정
+        amountText.text = "${String.format("%,d", amount)}원"
+        
+        // 힌트 설정
+        nameEditText.hint = "사용처를 입력하세요"
+        hintText.text = "예: 스타벅스, 롯데리아, GS25, 맛집 등"
+        
+        // 다이얼로그 생성
+        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+        
+        // 버튼 클릭 이벤트 설정
+        val btnNext = dialogView.findViewById<Button>(R.id.btnNext)
+        val btnSkip = dialogView.findViewById<Button>(R.id.btnSkip)
+        
+        btnNext.setOnClickListener {
+            val expenseName = nameEditText.text.toString().trim()
+            val finalName = if (expenseName.isBlank()) "영수증 항목" else expenseName
+            
+            Log.d(TAG, "사용처 확정: $finalName, 금액: ${amount}원")
+            
+            dialog.dismiss()
+            showExpenseAddDialog(amount, finalName, originalOcrText)
         }
         
-        val message = """
-            💰 금액: ${String.format("%,d", amount)}원
-            📝 어디서 사용하셨나요?
-            
-            카테고리별로 정리하여 여행 경비를 관리해드릴게요!
-        """.trimIndent()
+        btnSkip.setOnClickListener {
+            dialog.dismiss()
+            showExpenseAddDialog(amount, "영수증 항목", originalOcrText)
+        }
         
-        AlertDialog.Builder(this)
-            .setTitle("💳 사용처 입력")
-            .setMessage(message)
-            .setView(nameEditText)
-            .setPositiveButton("다음") { _, _ ->
-                val expenseName = nameEditText.text.toString().trim()
-                val finalName = if (expenseName.isBlank()) "영수증 항목" else expenseName
-                
-                Log.d(TAG, "사용처 확정: $finalName, 금액: ${amount}원")
-                
-                // 🎯 OCR Activity 내에서 바로 경비 추가 다이얼로그 처리
-                showExpenseAddDialog(amount, finalName, originalOcrText)
-            }
-            .setNegativeButton("건너뛰기") { _, _ ->
-                // 🎯 이름 없이도 바로 경비 추가 다이얼로그 처리
-                showExpenseAddDialog(amount, "영수증 항목", originalOcrText)
-            }
-            .setCancelable(false)
-            .show()
+        dialog.show()
         
         // EditText에 포커스
         nameEditText.requestFocus()
+        
+        // 키보드 자동 표시
+        val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        inputMethodManager.showSoftInput(nameEditText, InputMethodManager.SHOW_IMPLICIT)
     }
     
     /**
@@ -909,7 +894,7 @@ class OcrActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("💸 경비 추가")
             .setView(dialogView)
-            .setPositiveButton("저장 후 채팅 전송") { _, _ ->
+            .setPositiveButton("저장 및 카테고리") { _, _ ->
                 val finalAmount = amountEditText.text.toString().toIntOrNull() ?: amount
                 val finalDescription = descriptionEditText.text.toString().trim().let { desc ->
                     if (desc.isBlank()) {
@@ -928,8 +913,6 @@ class OcrActivity : AppCompatActivity() {
                 }
                 val finalCategory = categories[categorySpinner.selectedItemPosition]
                 
-                // 🎯 중복 방지하면서 저장 + 채팅 전송
-                saveExpenseAndSendToChat(finalAmount, finalDescription, finalCategory, ocrText)
             }
             .setNegativeButton("저장만") { _, _ ->
                 val finalAmount = amountEditText.text.toString().toIntOrNull() ?: amount
@@ -1455,8 +1438,6 @@ class OcrActivity : AppCompatActivity() {
             📱 영수증 OCR로 자동 분석됨
         """.trimIndent()
         
-        // 기존 채팅 전송 로직 활용
-        viewModel.sendCustomMessage(chatId, expenseMessage)
     }
     
     /**

@@ -137,7 +137,7 @@ class OcrViewModel(application: Application) : AndroidViewModel(application) {
      * 채팅방에 정산 결과 전송
      * @param chatId 채팅방 ID (옵션)
      * @param includeDetails 상세 내역 포함 여부
-     */
+     *
     fun sendToChat(chatId: String?, includeDetails: Boolean = false) {
         // 메시지 상세 로깅
         val formattedAmount = receiptAmount.value?.getMainAmount()?.let { amount ->
@@ -219,7 +219,7 @@ class OcrViewModel(application: Application) : AndroidViewModel(application) {
             Log.e(TAG, "❌ 커스텀 메시지 전송 실패", e)
         }
     }
-    
+    */
     /**
      * OCR 결과 직접 설정 (ROI 카메라용)
      */

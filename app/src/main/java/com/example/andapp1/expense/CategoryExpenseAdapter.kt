@@ -1,10 +1,13 @@
 package com.example.andapp1.expense
 
+import android.animation.ObjectAnimator
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.andapp1.R
@@ -24,11 +27,26 @@ class CategoryExpenseAdapter : ListAdapter<CategoryExpenseItem, CategoryExpenseA
     }
     
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val categoryHeader: View = itemView.findViewById(R.id.categoryHeader)
         private val categoryIcon: TextView = itemView.findViewById(R.id.categoryIcon)
         private val categoryName: TextView = itemView.findViewById(R.id.categoryName)
         private val itemCount: TextView = itemView.findViewById(R.id.itemCount)
         private val totalAmount: TextView = itemView.findViewById(R.id.totalAmount)
+        private val expandArrow: ImageView = itemView.findViewById(R.id.expandArrow)
         private val progressBar: View = itemView.findViewById(R.id.progressBar)
+        private val expenseDetailsRecyclerView: RecyclerView = itemView.findViewById(R.id.expenseDetailsRecyclerView)
+        
+        private var isExpanded = false
+        private val expenseDetailAdapter = ExpenseDetailAdapter()
+        
+        init {
+            // 세부 항목 RecyclerView 설정
+            expenseDetailsRecyclerView.apply {
+                layoutManager = LinearLayoutManager(itemView.context)
+                adapter = expenseDetailAdapter
+                isNestedScrollingEnabled = false
+            }
+        }
         
         fun bind(item: CategoryExpenseItem) {
             // 카테고리 아이콘 및 이름 설정
@@ -42,8 +60,55 @@ class CategoryExpenseAdapter : ListAdapter<CategoryExpenseItem, CategoryExpenseA
             // 금액 표시
             totalAmount.text = formatCurrency(item.totalAmount)
             
-            // 프로그레스 바는 나중에 구현 (전체 대비 비율)
-            // progressBar.layoutParams.width = calculateProgressWidth(item.totalAmount)
+            // 세부 항목 데이터 설정
+            expenseDetailAdapter.submitList(item.expenses)
+            
+            // 헤더 클릭 리스너
+            categoryHeader.setOnClickListener {
+                toggleExpansion()
+            }
+            
+            // 초기 상태 설정
+            updateExpandedState(false)
+        }
+        
+        private fun toggleExpansion() {
+            isExpanded = !isExpanded
+            updateExpandedState(true)
+        }
+        
+        private fun updateExpandedState(animate: Boolean) {
+            if (animate) {
+                // 화살표 회전 애니메이션
+                val rotation = if (isExpanded) 180f else 0f
+                ObjectAnimator.ofFloat(expandArrow, "rotation", rotation).apply {
+                    duration = 200
+                    start()
+                }
+                
+                // 세부 항목 표시/숨김 애니메이션
+                if (isExpanded) {
+                    expenseDetailsRecyclerView.visibility = View.VISIBLE
+                    expenseDetailsRecyclerView.alpha = 0f
+                    expenseDetailsRecyclerView.animate()
+                        .alpha(1f)
+                        .setDuration(200)
+                        .start()
+                } else {
+                    expenseDetailsRecyclerView.animate()
+                        .alpha(0f)
+                        .setDuration(200)
+                        .withEndAction {
+                            expenseDetailsRecyclerView.visibility = View.GONE
+                        }
+                        .start()
+                }
+            } else {
+                // 초기 상태 설정 (애니메이션 없음)
+                expandArrow.rotation = if (isExpanded) 180f else 0f
+                expenseDetailsRecyclerView.visibility = if (isExpanded) View.VISIBLE else View.GONE
+                expenseDetailsRecyclerView.alpha = if (isExpanded) 1f else 0f
+            }
         }
         
         private fun getCategoryDisplayInfo(category: String): Pair<String, String> {

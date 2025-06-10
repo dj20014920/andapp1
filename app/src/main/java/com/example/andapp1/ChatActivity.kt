@@ -832,48 +832,29 @@ class ChatActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.menu_chat, menu)
+        // 메뉴 XML을 사용하지 않고 직접 메뉴 아이템 추가
+        menu?.add(0, 1001, 0, "메뉴")?.apply {
+            setIcon(R.drawable.ic_menu)
+            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        }
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.menu_travel_expense -> {
-                // 여행 경비 관리 액티비티로 이동
-                val intent = Intent(this, com.example.andapp1.expense.TravelExpenseActivity::class.java).apply {
-                    putExtra("chatId", viewModel.roomCode)
-                    putExtra("roomName", supportActionBar?.title?.toString() ?: "채팅방")
-                }
-                startActivity(intent)
-                true
-            }
-            R.id.menu_participants -> {
-                // 참여자 목록 다이얼로그 띄우기
-                DialogHelper.showParticipantsDialog(this, viewModel.roomCode)
-                true
-            }
-            R.id.menu_open_map -> {
-                // ✅ 지도 액티비티로 이동
-                val intent = Intent(this, MapActivity::class.java)
-                intent.putExtra("roomCode", viewModel.roomCode) // 채팅방 코드 넘기기 (필요 시)
-                startActivity(intent)
-                return true
-            }
-            R.id.menu_scrap_list -> {
-                // 스크랩 목록 다이얼로그 띄우기 (또는 액티비티 이동)
-                ScrapDialogHelper.showScrapListDialog(this, viewModel.roomCode)
-                true
-            }
-            //  사진첩 메뉴
-            R.id.menu_photo_gallery -> {
-                val intent = Intent(this, PhotoGalleryActivity::class.java).apply {
+            1001 -> {
+                // 새로운 채팅방 메뉴 액티비티로 이동
+                val intent = Intent(this, ChatRoomMenuActivity::class.java).apply {
                     putExtra("roomCode", viewModel.roomCode)
                     putExtra("roomName", supportActionBar?.title?.toString() ?: "채팅방")
                 }
                 startActivity(intent)
                 true
             }
-
+            android.R.id.home -> {
+                finish()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }

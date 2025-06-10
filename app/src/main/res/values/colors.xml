@@ -167,7 +167,14 @@
     <!-- Additional Pastel Colors for UI -->
     <color name="background_pastel">#F8FBFF</color>
     <color name="pastel_green_200">#81C784</color>
+    <color name="pastel_green_100">#C8E6C9</color>
     <color name="pastel_red_50">#FFEBEE</color>
     <color name="pastel_red_200">#EF5350</color>
+    <color name="pastel_yellow_100">#FFF9C4</color>
+    <color name="pastel_yellow_200">#FBC02D</color>
+    <color name="pastel_purple_100">#E1BEE7</color>
+    <color name="pastel_purple_200">#9C27B0</color>
+    <color name="pastel_orange_100">#FFE0B2</color>
+    <color name="pastel_orange_200">#FF9800</color>
 
 </resources>

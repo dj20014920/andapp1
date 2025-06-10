@@ -164,4 +164,10 @@
     <!-- Status and background colors -->
     <color name="status_text_background_color">#F8F9FA</color>
 
+    <!-- Additional Pastel Colors for UI -->
+    <color name="background_pastel">#F8FBFF</color>
+    <color name="pastel_green_200">#81C784</color>
+    <color name="pastel_red_50">#FFEBEE</color>
+    <color name="pastel_red_200">#EF5350</color>
+
 </resources>

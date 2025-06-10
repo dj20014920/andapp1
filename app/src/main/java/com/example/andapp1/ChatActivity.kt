@@ -431,6 +431,9 @@ class ChatActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 상단바 겹침 문제 해결을 위한 Window 설정
+        window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimaryDark)
+        
         if (!OpenCVLoader.initDebug()) {
             Log.e("OpenCV", "OpenCV initialization failed")
         } else {

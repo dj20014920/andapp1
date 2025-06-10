@@ -12,9 +12,11 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
+        android:layout_marginTop="0dp"
         android:background="@drawable/toolbar_background"
         android:elevation="4dp"
         android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+        android:paddingTop="8dp"
         app:title="채팅방"
         app:titleTextColor="@android:color/white"
         app:layout_constraintTop_toTopOf="parent" />

@@ -92,7 +92,8 @@ dependencies {
     implementation(project(":chatkit"))
     // implementation("com.rmtheis:tess-two:9.1.0")
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.7.0")
-    implementation(project(":openCVLibrary"))
+    // OpenCV Maven Central 의존성 (4.9.0+)
+    implementation("org.opencv:opencv:4.10.0")
     implementation ("com.airbnb.android:lottie:6.4.0")
 
     //채팅 메시지 알림

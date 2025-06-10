@@ -68,4 +68,25 @@
     <color name="dialog_unread_text">@color/white</color>
     <color name="dialog_unread_bubble">@color/dark_mint</color>
 
+    <!-- Pastel 색상 팔레트 -->
+    <color name="pastel_blue_50">#E3F2FD</color>
+    <color name="pastel_blue_100">#BBDEFB</color>
+    <color name="pastel_blue_300">#64B5F6</color>
+    <color name="pastel_blue_400">#42A5F5</color>
+    <color name="pastel_green_200">#C8E6C9</color>
+    
+    <!-- 배경 및 테두리 색상 -->
+    <color name="card_background_pastel">#FAFAFA</color>
+    <color name="dialog_background_pastel">#FFFFFF</color>
+    <color name="border_pastel">#E0E0E0</color>
+    <color name="placeholder_background">#F5F5F5</color>
+    <color name="text_secondary_pastel">#757575</color>
+    
+    <!-- 추가 Pastel 색상들 -->
+    <color name="background_pastel">#F8F9FA</color>
+    <color name="text_primary_pastel">#212529</color>
+    <color name="pastel_red_50">#FFEBEE</color>
+    <color name="pastel_red_200">#EF9A9A</color>
+    <color name="status_text_background_color">#E8F5E8</color>
+
 </resources>

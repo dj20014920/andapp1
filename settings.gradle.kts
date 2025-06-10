@@ -28,5 +28,6 @@ rootProject.name = "AndApp1"
 include(":app")
 include(":app", ":chatkit")
 project(":chatkit").projectDir = File(rootDir, "ChatKit-master/chatkit")
-include(":openCVLibrary")
-project(":openCVLibrary").projectDir = File("openCVLibrary")
+// OpenCV는 이제 Maven Central에서 가져옴
+// include(":openCVLibrary")
+// project(":openCVLibrary").projectDir = File("openCVLibrary")

@@ -1,2 +1,0 @@
-ninja: Entering directory `/Users/dj20014920/Desktop/andapp1/openCVLibrary/.cxx/RelWithDebInfo/2u121p66/x86_64'
-ninja: no work to do.

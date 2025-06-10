@@ -172,4 +172,13 @@
         <item name="android:gravity">center</item>
     </style>
 
+    <!-- 다이얼로그 버튼 스타일 -->
+    <style name="DialogButton" parent="Widget.Material3.Button.TonalButton">
+        <item name="cornerRadius">8dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:layout_marginHorizontal">4dp</item>
+    </style>
+
 </resources>

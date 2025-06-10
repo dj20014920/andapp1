@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# OpenCV 빌드 파일들 (소스는 유지, 빌드 결과물만 제외)
+openCVLibrary/build/
+ChatKit-master/chatkit/build/

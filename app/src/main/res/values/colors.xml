@@ -100,5 +100,6 @@
     <color name="pastel_orange_200">#FFB74D</color>
     <color name="gray_100">#F5F5F5</color>
     <color name="gray_600">#757575</color>
+    <color name="background_light">#F8F9FA</color>
 
 </resources>

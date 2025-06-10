@@ -358,26 +358,40 @@ class ChatActivity : AppCompatActivity() {
     private fun initializeAdapterAndListeners() {
         lifecycleScope.launch {
             // 1) DB에서 currentUser 불러오기
-            val user = RoomDatabaseInstance
-                .getInstance(applicationContext)
-                .userDao()
-                .getUser()
+            Log.d("ChatActivity_UserLoad", "🔍 사용자 정보 로딩 시작...")
+            
+            val user = try {
+                RoomDatabaseInstance
+                    .getInstance(applicationContext)
+                    .userDao()
+                    .getUser()
+            } catch (e: Exception) {
+                Log.e("ChatActivity_UserLoad", "❌ DB에서 사용자 정보 로딩 실패", e)
+                null
+            }
+            
+            Log.d("ChatActivity_UserLoad", "👤 로딩된 사용자 정보: ${user?.let { "ID=${it.id}, Name=${it.nickname}" } ?: "null"}")
+            
             currentUser = user
 
             if (user == null) {
-                Toast.makeText(this@ChatActivity, "⚠ 사용자 정보를 불러오지 못했습니다.", Toast.LENGTH_SHORT).show()
+                Log.e("ChatActivity_UserLoad", "❌ 사용자 정보가 null입니다. 로그인 화면으로 이동합니다.")
+                Toast.makeText(this@ChatActivity, "⚠️ 사용자 정보를 불러오지 못했습니다.\n다시 로그인해주세요.", Toast.LENGTH_LONG).show()
+                
+                // 로그인 화면으로 이동
+                val intent = Intent(this@ChatActivity, LoginActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
                 finish()
                 return@launch
             }
 
-            senderId = user?.id ?: "unknown"
+            senderId = user.id
+            Log.d("ChatActivity_UserLoad", "✅ 사용자 정보 로딩 완료. senderId = $senderId")
 
-            if (user == null) {
-                Toast.makeText(this@ChatActivity, "⚠ 사용자 정보를 불러올 수 없습니다.", Toast.LENGTH_SHORT).show()
-                finish()
-                return@launch
-            }
-
+            // 2) 참가자 권한 확인
+            Log.d("ChatActivity_Participants", "🔍 참가자 권한 확인 시작: Room=${viewModel.roomCode}, User=${user.id}")
+            
             val participantsRef = FirebaseDatabase.getInstance()
                 .getReference("rooms")
                 .child(viewModel.roomCode)
@@ -385,117 +399,134 @@ class ChatActivity : AppCompatActivity() {
                 .child(user.id)
 
             participantsRef.get().addOnSuccessListener { snapshot ->
-                Log.d("ChatActivity_Participants", "참가자 스냅샷 수신. key: ${snapshot.key}, exists: ${snapshot.exists()}")
+                Log.d("ChatActivity_Participants", "📱 참가자 스냅샷 수신: key=${snapshot.key}, exists=${snapshot.exists()}")
+                Log.d("ChatActivity_Participants", "📱 스냅샷 값: ${snapshot.value}")
+                
                 if (!snapshot.exists()) {
-                    Toast.makeText(this@ChatActivity, "⚠ 이미 나간 채팅방이거나 참여자 정보 없음.", Toast.LENGTH_SHORT).show()
-                    Log.w("ChatActivity_Participants", "참가자가 아니므로 finish() 호출됨. User ID: ${user.id}, Room Code: ${viewModel.roomCode}")
+                    Log.w("ChatActivity_Participants", "❌ 참가자 정보 없음 - 채팅방 입장 거부")
+                    Toast.makeText(this@ChatActivity, "⚠️ 참여하지 않은 채팅방입니다.\n채팅방 코드를 다시 확인해주세요.", Toast.LENGTH_LONG).show()
                     finish() // 🚫 채팅방 입장 금지
                 } else {
-                    Log.d("ChatActivity_Participants", "✅ 참가자 확인 완료. User ID: ${user.id}, Room Code: ${viewModel.roomCode}")
+                    Log.d("ChatActivity_Participants", "✅ 참가자 확인 완료 - 채팅방 입장 허용")
+                    // 어댑터 초기화는 참가자 확인 후에만 실행
+                    initializeChatAdapter()
                 }
             }.addOnFailureListener { exception ->
-                Log.e("ChatActivity_Participants", "참가자 정보 로드 실패: ${exception.message}", exception)
-                Toast.makeText(this@ChatActivity, "⚠ 참가자 정보를 가져오는데 실패했습니다.", Toast.LENGTH_SHORT).show()
-                // finish() // 실패 시에도 일단 종료 (기존 로직 유지 또는 다른 처리 고민 필요) -> 실패 시 바로 종료하지 않도록 일단 주석 처리
-            }
-
-            // ✅ 커스텀 ViewHolder 사용
-            val holders = MessageHolders()
-                .setIncomingTextHolder(
-                    CustomIncomingTextViewHolder::class.java,
-                    R.layout.item_incoming_text_message
-                )
-                .setIncomingImageHolder(
-                    CustomIncomingImageViewHolder::class.java,
-                    R.layout.item_incoming_image_message
-                )
-                // outcoming은 기본 사용 (프로필 이미지 없음)
-                .setOutcomingTextHolder(
-                    TextMessageViewHolder::class.java,
-                    com.stfalcon.chatkit.R.layout.item_outcoming_text_message
-                )
-                .setOutcomingImageHolder(
-                    OutcomingImageMessageViewHolder::class.java,
-                    R.layout.item_outcoming_image_message
-                )
-
-            // 3) 어댑터 생성
-            adapter = MessagesListAdapter<ChatMessage>(
-                senderId,
-                holders,
-                ImageLoader { imageView, url, _ ->
-                    // ✅ 디버깅 로그 추가
-                    Log.d("ProfileDebug", "=== ImageLoader 호출됨 ===")
-                    Log.d("ProfileDebug", "ImageView: $imageView")
-                    Log.d("ProfileDebug", "URL: $url")
-
-                    if (!url.isNullOrEmpty()) {
-                        Log.d("ProfileDebug", "Glide로 이미지 로드 시작: $url")
-                        Glide.with(imageView.context)
-                            .load(url)
-                            .error(R.drawable.ic_launcher_background) // 에러 시 기본 이미지 표시
-                            .into(imageView)
-                    } else {
-                        Log.w("ProfileDebug", "URL이 비어있어서 기본 이미지 설정")
-                        imageView.setImageResource(R.drawable.ic_launcher_background) // 기본 이미지
+                Log.e("ChatActivity_Participants", "❌ 참가자 정보 로드 실패", exception)
+                Toast.makeText(this@ChatActivity, "⚠️ 네트워크 연결을 확인해주세요.\n잠시 후 다시 시도해보세요.", Toast.LENGTH_LONG).show()
+                
+                // 3초 후 자동으로 다시 시도
+                Handler(Looper.getMainLooper()).postDelayed({
+                    if (!isFinishing && !isDestroyed) {
+                        recreate() // 액티비티 재시작
                     }
-                }
+                }, 3000)
+            }
+        }
+    }
+
+    private fun initializeChatAdapter() {
+        Log.d("ChatActivity_Adapter", "🔧 채팅 어댑터 초기화 시작...")
+        
+        val user = currentUser ?: return
+
+        // ✅ 커스텀 ViewHolder 사용
+        val holders = MessageHolders()
+            .setIncomingTextHolder(
+                CustomIncomingTextViewHolder::class.java,
+                R.layout.item_incoming_text_message
+            )
+            .setIncomingImageHolder(
+                CustomIncomingImageViewHolder::class.java,
+                R.layout.item_incoming_image_message
+            )
+            // outcoming은 기본 사용 (프로필 이미지 없음)
+            .setOutcomingTextHolder(
+                TextMessageViewHolder::class.java,
+                com.stfalcon.chatkit.R.layout.item_outcoming_text_message
+            )
+            .setOutcomingImageHolder(
+                OutcomingImageMessageViewHolder::class.java,
+                R.layout.item_outcoming_image_message
             )
 
-            binding.messagesList.setAdapter(adapter)
+        // 어댑터 생성
+        adapter = MessagesListAdapter<ChatMessage>(
+            senderId,
+            holders,
+            ImageLoader { imageView, url, _ ->
+                // ✅ 디버깅 로그 추가
+                Log.d("ProfileDebug", "=== ImageLoader 호출됨 ===")
+                Log.d("ProfileDebug", "ImageView: $imageView")
+                Log.d("ProfileDebug", "URL: $url")
 
-            // 메시지 클릭 (텍스트 메시지용)
-            adapter.setOnMessageClickListener { message: ChatMessage ->
-                val imageUrl = message.imageUrlValue
-                Log.d("💥클릭된 메시지", "imageUrlValue = $imageUrl")
-
-                // 📸 이미지 메시지만 처리 (텍스트 메시지는 TextMessageViewHolder에서 처리)
-                if (!imageUrl.isNullOrEmpty()) {
-                    val urls = imageMessages
-                    val idx = urls.indexOf(imageUrl)
-
-                    val photoListToSend = if (idx != -1) {
-                        ArrayList(urls)
-                    } else {
-                        arrayListOf(imageUrl)
-                    }
-
-                    val position = if (idx != -1) idx else 0
-
-                    Log.d("ChatActivity", "▶︎ 이미지 클릭 → photoList=$photoListToSend, index=$position")
-
-                    val intent = Intent(this@ChatActivity, ImageViewerActivity::class.java)
-                        .putStringArrayListExtra("photoList", photoListToSend)
-                        .putExtra("startPosition", position)
-
-                    startActivity(intent)
+                if (!url.isNullOrEmpty()) {
+                    Log.d("ProfileDebug", "Glide로 이미지 로드 시작: $url")
+                    Glide.with(imageView.context)
+                        .load(url)
+                        .error(R.drawable.ic_launcher_background) // 에러 시 기본 이미지 표시
+                        .into(imageView)
+                } else {
+                    Log.w("ProfileDebug", "URL이 비어있어서 기본 이미지 설정")
+                    imageView.setImageResource(R.drawable.ic_launcher_background) // 기본 이미지
                 }
             }
+        )
 
-            // 텍스트 전송 버튼
-            binding.customMessageInput.setInputListener { input ->
-                viewModel.sendMessage(input.toString())
+        binding.messagesList.setAdapter(adapter)
 
-                // 🔽 메시지 전송 후 자동 스크롤 추가
-                binding.messagesList.post {
-                    layoutManager.scrollToPositionWithOffset(adapter.itemCount - 1, 0)
+        // 메시지 클릭 (텍스트 메시지용)
+        adapter.setOnMessageClickListener { message: ChatMessage ->
+            val imageUrl = message.imageUrlValue
+            Log.d("💥클릭된 메시지", "imageUrlValue = $imageUrl")
+
+            // 📸 이미지 메시지만 처리 (텍스트 메시지는 TextMessageViewHolder에서 처리)
+            if (!imageUrl.isNullOrEmpty()) {
+                val urls = imageMessages
+                val idx = urls.indexOf(imageUrl)
+
+                val photoListToSend = if (idx != -1) {
+                    ArrayList(urls)
+                } else {
+                    arrayListOf(imageUrl)
                 }
-                true
-            }
 
-            // 사진 버튼
-            binding.btnSendPhoto.setOnClickListener {
-                val options = arrayOf("사진 촬영", "갤러리에서 선택")
-                AlertDialog.Builder(this@ChatActivity)
-                    .setTitle("사진 선택")
-                    .setItems(options) { _, which ->
-                        if (which == 0) openCamera() else openGallery()
-                    }
-                    .show()
+                val position = if (idx != -1) idx else 0
+
+                Log.d("ChatActivity", "▶︎ 이미지 클릭 → photoList=$photoListToSend, index=$position")
+
+                val intent = Intent(this@ChatActivity, ImageViewerActivity::class.java)
+                    .putStringArrayListExtra("photoList", photoListToSend)
+                    .putExtra("startPosition", position)
+
+                startActivity(intent)
             }
-            // 메시지 옵저빙 시작
-            observeMessages()
         }
+
+        // 텍스트 전송 버튼
+        binding.customMessageInput.setInputListener { input ->
+            viewModel.sendMessage(input.toString())
+
+            // 🔽 메시지 전송 후 자동 스크롤 추가
+            binding.messagesList.post {
+                layoutManager.scrollToPositionWithOffset(adapter.itemCount - 1, 0)
+            }
+            true
+        }
+
+        // 사진 버튼
+        binding.btnSendPhoto.setOnClickListener {
+            val options = arrayOf("사진 촬영", "갤러리에서 선택")
+            AlertDialog.Builder(this@ChatActivity)
+                .setTitle("사진 선택")
+                .setItems(options) { _, which ->
+                    if (which == 0) openCamera() else openGallery()
+                }
+                .show()
+        }
+        
+        // 메시지 옵저빙 시작
+        observeMessages()
     }
 
     private fun observeMessages() {

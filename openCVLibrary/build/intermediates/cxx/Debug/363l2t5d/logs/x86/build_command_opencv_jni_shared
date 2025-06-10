@@ -1,0 +1,4 @@
+/Users/dj20014920/Library/Android/sdk/cmake/3.22.1/bin/ninja \
+  -C \
+  /Users/dj20014920/Desktop/andapp1/openCVLibrary/.cxx/Debug/363l2t5d/x86 \
+  opencv_jni_shared

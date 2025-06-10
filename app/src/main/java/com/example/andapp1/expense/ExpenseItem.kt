@@ -2,40 +2,54 @@ package com.example.andapp1.expense
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.text.NumberFormat
-import java.util.*
+import java.util.Date
 
-@Entity(tableName = "expenses")
+/**
+ * 여행 경비 항목 데이터 클래스
+ */
+@Entity(tableName = "expense_items")
 data class ExpenseItem(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+    @PrimaryKey
+    val id: String = "",
     val chatId: String = "",
-    val userName: String = "",
+    val amount: Int = 0,
     val description: String = "",
-    val amount: Double = 0.0,
     val category: String = "기타",
     val createdAt: Date = Date(),
-    val participants: List<String> = emptyList(),
-    val isSettled: Boolean = false
+    val userId: String = "",
+    val userName: String = "",
+    val ocrText: String = "",
+    val imageUri: String? = null
 ) {
-    fun getDisplayDescription(): String {
-        return description.ifEmpty { "항목 없음" }
-    }
-    
+    /**
+     * 포맷된 금액 문자열 반환
+     */
     fun getFormattedAmount(): String {
-        val formatter = NumberFormat.getCurrencyInstance(Locale.KOREA)
-        return formatter.format(amount).replace("₩", "") + "원"
+        return "${String.format("%,d", amount)}원"
     }
     
-    fun getCategoryEmoji(): String {
-        return when (category) {
-            "식비" -> "🍽️"
-            "교통비" -> "🚗"
-            "숙박비" -> "🏨"
-            "관광비" -> "🎡"
-            "쇼핑" -> "🛍️"
-            "기타" -> "💼"
-            else -> "��"
+    /**
+     * 표시용 설명 반환 (빈 경우 "금액 정보"로 표시)
+     */
+    fun getDisplayDescription(): String {
+        return if (description.isBlank()) "금액 정보" else description
+    }
+}
+
+/**
+ * 경비 카테고리 열거형
+ */
+enum class ExpenseCategory(val displayName: String, val emoji: String) {
+    FOOD("식비", "🍽️"),
+    TRANSPORT("교통비", "🚗"),
+    ACCOMMODATION("숙박비", "🏨"),
+    ACTIVITY("액티비티", "🎢"),
+    SHOPPING("쇼핑", "🛍️"),
+    OTHER("기타", "💼");
+    
+    companion object {
+        fun fromDisplayName(displayName: String): ExpenseCategory {
+            return values().find { it.displayName == displayName } ?: OTHER
         }
     }
 } 

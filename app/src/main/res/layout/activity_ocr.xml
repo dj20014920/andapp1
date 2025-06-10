@@ -1,214 +1,278 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/background_light"
     tools:context=".ocr.OcrActivity">
 
-    <!-- 상단 바 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/colorPrimary"
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- 헤더 -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="영수증 인식"
-            android:textColor="@android:color/white"
-            android:textSize="20sp"
+            android:text="🧾 여행 경비"
+            android:textSize="24sp"
             android:textStyle="bold"
-            android:gravity="center" />
+            android:textColor="@color/primary_text"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
 
-        <TextView
-            android:id="@+id/tv_status"
+        <!-- 이미지 섹션 -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="OCR 엔진을 초기화하는 중..."
-            android:textColor="@android:color/white"
-            android:textSize="14sp"
-            android:gravity="center" />
+            android:layout_marginBottom="16dp"
+            app:cardElevation="4dp"
+            app:cardCornerRadius="12dp">
 
-    </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-    <!-- 메인 컨텐츠 -->
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📸 원본 이미지"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/primary_text"
+                    android:layout_marginBottom="8dp" />
 
+                <ImageView
+                    android:id="@+id/imageView"
+                    android:layout_width="match_parent"
+                    android:layout_height="180dp"
+                    android:scaleType="centerInside"
+                    android:adjustViewBounds="true"
+                    android:background="@color/surface"
+                    android:src="@android:drawable/ic_menu_gallery"
+                    android:contentDescription="선택된 이미지" />
+
+                <!-- 처리된 이미지 (OCR용) -->
+                <TextView
+                    android:id="@+id/processedImageLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🔍 처리된 이미지 (금액 영역)"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/secondary_text"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/processedImageView"
+                    android:layout_width="match_parent"
+                    android:layout_height="120dp"
+                    android:scaleType="centerCrop"
+                    android:background="@color/surface_variant"
+                    android:contentDescription="처리된 이미지"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 컨트롤 버튼 -->
+        <LinearLayout
+            android:id="@+id/buttonContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/cameraButton"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="📷 카메라"
+                android:textSize="16sp"
+                android:clickable="true"
+                android:focusable="true"
+                android:enabled="true"
+                android:minHeight="48dp"
+                android:padding="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/galleryButton"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="🖼️ 갤러리"
+                android:textSize="16sp"
+                android:clickable="true"
+                android:focusable="true"
+                android:enabled="true"
+                android:minHeight="48dp"
+                android:padding="12dp" />
+
+        </LinearLayout>
+
+        <!-- 로딩 및 상태 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:gravity="center"
+            android:layout_marginBottom="16dp">
 
-            <!-- 이미지 프리뷰 -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="240dp"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp">
-
-                <ImageView
-                    android:id="@+id/iv_preview"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@color/gray_100"
-                    android:scaleType="centerCrop"
-                    android:visibility="gone"
-                    tools:src="@drawable/ic_launcher_background" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="촬영된 이미지가 여기에 표시됩니다"
-                    android:textColor="@color/gray_600"
-                    android:textSize="16sp" />
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- 카메라/갤러리 버튼 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btn_camera"
-                    android:layout_width="0dp"
-                    android:layout_height="56dp"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_button_primary"
-                    android:drawableLeft="@android:drawable/ic_menu_camera"
-                    android:drawablePadding="8dp"
-                    android:text="카메라"
-                    android:textColor="@android:color/white"
-                    android:textSize="16sp" />
-
-                <Button
-                    android:id="@+id/btn_gallery"
-                    android:layout_width="0dp"
-                    android:layout_height="56dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_button_secondary"
-                    android:drawableLeft="@android:drawable/ic_menu_gallery"
-                    android:drawablePadding="8dp"
-                    android:text="갤러리"
-                    android:textColor="@color/colorPrimary"
-                    android:textSize="16sp" />
-
-            </LinearLayout>
-
-            <!-- 로딩 바 -->
             <ProgressBar
-                android:id="@+id/progress_bar"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="4dp"
-                android:layout_marginBottom="16dp"
-                android:indeterminate="true"
+                android:id="@+id/loadingView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
                 android:visibility="gone" />
 
-            <!-- OCR 결과 -->
-            <LinearLayout
-                android:id="@+id/layout_result"
+            <TextView
+                android:id="@+id/statusText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="인식된 텍스트"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/colorPrimary" />
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:cardCornerRadius="8dp"
-                    app:cardElevation="2dp">
-
-                    <TextView
-                        android:id="@+id/tv_extracted_text"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="80dp"
-                        android:padding="16dp"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/black"
-                        tools:text="인식된 텍스트가 여기에 표시됩니다" />
-
-                </androidx.cardview.widget.CardView>
-
-                <TextView
-                    android:id="@+id/tv_extracted_amount"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:background="@drawable/bg_rounded_top_black"
-                    android:padding="16dp"
-                    android:text="추출된 금액: 0원"
-                    android:textColor="@android:color/white"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
-
-            <!-- 하단 버튼 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:orientation="horizontal"
-                android:visibility="gone"
-                android:id="@+id/layout_buttons">
-
-                <Button
-                    android:id="@+id/btn_retry"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_button_secondary"
-                    android:text="다시 시도"
-                    android:textColor="@color/colorPrimary"
-                    android:textSize="16sp"
-                    android:visibility="gone" />
-
-                <Button
-                    android:id="@+id/btn_confirm"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_button_success"
-                    android:text="확인"
-                    android:textColor="@android:color/white"
-                    android:textSize="16sp"
-                    android:visibility="gone" />
-
-            </LinearLayout>
+                android:text="영수증을 촬영하거나 갤러리에서 선택해주세요"
+                android:textSize="16sp"
+                android:textColor="@color/secondary_text"
+                android:gravity="center"
+                android:padding="8dp" />
 
         </LinearLayout>
 
-    </ScrollView>
+        <!-- 금액 요약 카드 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/amountSummaryCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"
+            app:cardElevation="6dp"
+            app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="@color/success_light">
 
-</LinearLayout> 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="💰 총 금액"
+                    android:textSize="16sp"
+                    android:textColor="@color/success_dark"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/totalAmountText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0원"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/success_dark"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/itemCountText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="금액 정보"
+                    android:textSize="14sp"
+                    android:textColor="@color/success_dark"
+                    android:alpha="0.8" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 결과 섹션 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardElevation="4dp"
+            app:cardCornerRadius="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📋 분석 결과"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/primary_text"
+                    android:layout_marginBottom="12dp" />
+
+                <ScrollView
+                    android:id="@+id/resultScrollView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxHeight="300dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/resultText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="분석 결과가 여기에 표시됩니다"
+                        android:textSize="14sp"
+                        android:textColor="@color/primary_text"
+                        android:lineSpacingExtra="4dp"
+                        android:padding="12dp"
+                        android:background="@color/surface_variant"
+                        android:textIsSelectable="true" />
+
+                </ScrollView>
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 액션 버튼 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/sendToChatButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginBottom="8dp"
+                android:text="💬 채팅방에 전송"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/retryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔄 다시 시도"
+                android:textSize="14sp"
+                android:visibility="gone"
+                style="?android:attr/borderlessButtonStyle" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView> 

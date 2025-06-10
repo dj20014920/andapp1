@@ -2,8 +2,12 @@ package com.example.andapp1
 
 import android.content.Context
 import android.content.Intent
-import android.widget.ArrayAdapter
+import android.view.LayoutInflater
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.google.firebase.database.*
 
 object ScrapDialogHelper {
@@ -24,38 +28,53 @@ object ScrapDialogHelper {
                     }
                 }
 
-                if (scrapList.isEmpty()) {
-                    AlertDialog.Builder(context)
-                        .setTitle("📌 스크랩 목록")
-                        .setMessage("스크랩된 장소가 없습니다.")
-                        .setPositiveButton("확인", null)
-                        .show()
-                    return
-                }
-
-                val adapter = ArrayAdapter(
-                    context,
-                    android.R.layout.simple_list_item_1,
-                    scrapList.map { it.name })
-
-                AlertDialog.Builder(context)
-                    .setTitle("📌 스크랩 목록")
-                    .setAdapter(adapter) { _, which ->
-                        val url = scrapList[which].url
-                        openWebView(context, url, roomCode)
-                    }
-                    .setNegativeButton("닫기", null)
-                    .show()
+                showScrapDialog(context, scrapList, roomCode)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                AlertDialog.Builder(context)
-                    .setTitle("오류 발생")
-                    .setMessage("스크랩 목록을 불러오는 중 오류가 발생했습니다.")
-                    .setPositiveButton("확인", null)
-                    .show()
+                DialogHelper.showStyledConfirmDialog(
+                    context = context,
+                    title = "오류 발생",
+                    message = "스크랩 목록을 불러오는 중 오류가 발생했습니다.",
+                    positiveText = "확인"
+                )
             }
         })
+    }
+
+    private fun showScrapDialog(context: Context, scrapList: List<ScrapItem>, roomCode: String) {
+        if (scrapList.isEmpty()) {
+            DialogHelper.showStyledConfirmDialog(
+                context = context,
+                title = "스크랩 목록",
+                message = "스크랩된 장소가 없습니다.\n지도에서 장소를 스크랩해보세요.",
+                positiveText = "확인"
+            )
+            return
+        }
+
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_scrap_list, null)
+        
+        val titleView = dialogView.findViewById<TextView>(R.id.dialog_title)
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.recyclerView)
+        val closeButton = dialogView.findViewById<MaterialButton>(R.id.btn_close)
+        
+        titleView.text = "스크랩 목록"
+        
+        val adapter = ScrapAdapter(scrapList) { scrapItem ->
+            openWebView(context, scrapItem.url, roomCode)
+        }
+        
+        recyclerView.layoutManager = LinearLayoutManager(context)
+        recyclerView.adapter = adapter
+        
+        val dialog = AlertDialog.Builder(context, R.style.AppDialog)
+            .setView(dialogView)
+            .create()
+            
+        closeButton.setOnClickListener { dialog.dismiss() }
+        
+        dialog.show()
     }
 
     private fun openWebView(context: Context, url: String, roomCode: String) {

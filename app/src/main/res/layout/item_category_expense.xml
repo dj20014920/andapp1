@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/expense_item_background"
+    android:layout_marginVertical="4dp">
+
+    <!-- 메인 카테고리 헤더 (클릭 가능) -->
+    <LinearLayout
+        android:id="@+id/categoryHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <!-- 카테고리 아이콘 -->
+        <TextView
+            android:id="@+id/categoryIcon"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:text="💰"
+            android:textSize="20sp"
+            android:gravity="center"
+            android:background="@drawable/category_icon_background"
+            android:layout_marginEnd="12dp" />
+
+        <!-- 카테고리 정보 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/categoryName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="카테고리명"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="2dp" />
+
+            <TextView
+                android:id="@+id/itemCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0개 항목"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary" />
+
+        </LinearLayout>
+
+        <!-- 금액 -->
+        <TextView
+            android:id="@+id/totalAmount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0원"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/ocean_blue"
+            android:layout_marginEnd="8dp" />
+
+        <!-- 드롭다운 화살표 -->
+        <ImageView
+            android:id="@+id/expandArrow"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_arrow_down"
+            app:tint="@color/text_secondary"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:padding="4dp" />
+
+    </LinearLayout>
+
+    <!-- 프로그레스 바 (전체 대비 비율 표시용) -->
+    <View
+        android:id="@+id/progressBar"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:background="@drawable/progress_bar_background"
+        android:layout_marginHorizontal="16dp" />
+
+    <!-- 세부 항목 컨테이너 (확장 시 표시) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/expenseDetailsRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="8dp"
+        android:nestedScrollingEnabled="false"
+        android:visibility="gone" />
+
+</LinearLayout> 

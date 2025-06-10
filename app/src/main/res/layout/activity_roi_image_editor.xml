@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/camera_background">
+
+    <!-- 상단 가이드 텍스트 -->
+    <TextView
+        android:id="@+id/guide_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="16dp"
+        android:text="영수증의 금액 부분을 선택하세요"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:textAlignment="center"
+        android:background="@drawable/rounded_background"
+        android:backgroundTint="@color/roi_overlay"
+        android:padding="12dp" />
+
+    <!-- 이미지 편집 영역 -->
+    <FrameLayout
+        android:id="@+id/image_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/guide_text"
+        android:layout_above="@+id/control_panel"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginHorizontal="8dp"
+        android:background="@drawable/rounded_background"
+        android:backgroundTint="@color/surface_color">
+
+        <!-- 확대/축소 가능한 이미지 뷰 -->
+        <com.example.andapp1.ocr.ZoomableImageView
+            android:id="@+id/zoomable_image_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/surface_color" />
+
+        <!-- ROI 선택 오버레이 -->
+        <com.example.andapp1.ocr.CameraOverlayView
+            android:id="@+id/overlay_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </FrameLayout>
+
+    <!-- 하단 컨트롤 패널 -->
+    <LinearLayout
+        android:id="@+id/control_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="16dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="@drawable/rounded_background"
+        android:backgroundTint="@color/roi_overlay"
+        android:padding="16dp">
+
+        <!-- 리셋 버튼 -->
+        <Button
+            android:id="@+id/reset_button"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="초기화"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:background="@drawable/button_background_secondary"
+            android:backgroundTint="@color/secondary_color"
+            style="?android:attr/borderlessButtonStyle" />
+
+        <!-- 확인 버튼 -->
+        <Button
+            android:id="@+id/confirm_button"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="확인"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:background="@drawable/button_background_primary"
+            android:backgroundTint="@color/primary_color"
+            android:enabled="false"
+            style="?android:attr/borderlessButtonStyle" />
+
+    </LinearLayout>
+
+    <!-- 줌/드래그 힌트 (처음에만 표시) -->
+    <TextView
+        android:id="@+id/zoom_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="💡 핀치로 확대하고 드래그로 이동하세요"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:background="@drawable/rounded_background"
+        android:backgroundTint="@color/black_overlay"
+        android:padding="8dp"
+        android:visibility="visible"
+        android:alpha="0.8" />
+
+</RelativeLayout> 

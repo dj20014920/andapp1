@@ -209,21 +209,32 @@ class MapActivity : AppCompatActivity() {
     private fun promptScrapNameAndSave() {
         val roomCode = intent.getStringExtra("roomCode") ?: return
         val dialogView = layoutInflater.inflate(R.layout.dialog_scrap_input, null)
-        val editText = dialogView.findViewById<EditText>(R.id.editScrapName)
-        val saveButton = dialogView.findViewById<Button>(R.id.btnSaveScrap)
+        val editText = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editScrapName)
+        val saveButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSaveScrap)
+        val cancelButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
 
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("스크랩 이름")
+        val dialog = AlertDialog.Builder(this, R.style.AppDialog)
             .setView(dialogView)
             .setCancelable(true)
             .create()
 
+        // 취소 버튼 클릭
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        // 저장 버튼 클릭
         saveButton.setOnClickListener {
             val name = editText.text.toString().trim()
             if (name.isEmpty()) {
-                Toast.makeText(this, "⚠️ 장소 이름을 입력해주세요", Toast.LENGTH_SHORT).show()
+                editText.error = "장소 이름을 입력해주세요"
+                editText.requestFocus()
                 return@setOnClickListener
             }
+
+            // 버튼 비활성화 및 로딩 상태 표시
+            saveButton.isEnabled = false
+            saveButton.text = "저장 중..."
 
             val url = binding.webView.url ?: return@setOnClickListener
             val scrap = ScrapItem(
@@ -239,24 +250,56 @@ class MapActivity : AppCompatActivity() {
                 .push()
                 .setValue(scrap)
                 .addOnSuccessListener {
-                    Toast.makeText(this, "✅ 스크랩 저장됨", Toast.LENGTH_SHORT).show()
-
-                    // 자동 메시지 전송
-                    val messageIntent = Intent(this, ChatActivity::class.java).apply {
-                        putExtra("roomCode", roomCode)
-                        putExtra("mapUrl", url)
-                        putExtra("scrapText", "📌 ${name}을(를) 스크랩했어요!\n$url")
-                        addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-                    }
-                    startActivity(messageIntent)
+                    dialog.dismiss()
+                    
+                    // 성공 토스트 메시지
+                    DialogHelper.showStyledConfirmDialog(
+                        context = this,
+                        title = "스크랩 완료",
+                        message = "'$name'이(가) 스크랩 목록에 저장되었습니다.\n채팅방에 공유하시겠습니까?",
+                        positiveText = "공유하기",
+                        negativeText = "나중에",
+                        onPositive = {
+                            // 자동 메시지 전송
+                            val messageIntent = Intent(this, ChatActivity::class.java).apply {
+                                putExtra("roomCode", roomCode)
+                                putExtra("mapUrl", url)
+                                putExtra("scrapText", "📌 ${name}\n$url")
+                                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                            }
+                            startActivity(messageIntent)
+                        }
+                    )
                 }
-                .addOnFailureListener {
-                    Toast.makeText(this, "❌ 저장 실패", Toast.LENGTH_SHORT).show()
+                .addOnFailureListener { exception ->
+                    // 버튼 상태 복원
+                    saveButton.isEnabled = true
+                    saveButton.text = "스크랩 저장"
+                    
+                    DialogHelper.showStyledConfirmDialog(
+                        context = this,
+                        title = "저장 실패",
+                        message = "스크랩 저장 중 오류가 발생했습니다.\n다시 시도해주세요.",
+                        positiveText = "확인"
+                    )
                 }
+        }
 
-            dialog.dismiss()
+        // 엔터키로 저장
+        editText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                saveButton.performClick()
+                true
+            } else {
+                false
+            }
         }
 
         dialog.show()
+        
+        // 키보드 자동 표시
+        editText.requestFocus()
+        val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
     }
 }

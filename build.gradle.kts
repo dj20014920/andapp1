@@ -18,11 +18,3 @@ buildscript {
         classpath("com.android.tools.build:gradle:8.9.0") // ✅ 최신 AGP 8.4.0으로 업그레이드
     }
 }
-
-// allprojects {
-//     repositories {
-//         google()
-//         mavenCentral()
-
-//     }
-// }

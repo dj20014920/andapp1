@@ -183,26 +183,6 @@ object ReceiptOcrProcessor {
      * OCR 텍스트에서 '총액', '합계', '금액' 레이블 기반 숫자 추출.
      * 레이블 추출 실패 시 robust 방식으로 최대값 반환.
      */
-    /*fun extractTotalAmount(text: String): Int {
-        // ① 레이블 기반 추출 (합계/총액/금액 + 원)
-        Regex("""(?:총\s*액|합\s*계|금\s*액)[^\d]{0,5}([\d,]+)""")
-            .find(text)
-            ?.groupValues?.get(1)
-            ?.replace(",", "")
-            ?.toIntOrNull()
-            ?.let { return it }
-
-        // ② 숫자+원 패턴 중 마지막 매치
-        Regex("""([\d,]+)\s*원""")
-            .findAll(text)
-            .mapNotNull { it.groupValues[1].replace(",", "").toIntOrNull() }
-            .lastOrNull()
-            ?.let { return it }
-
-        // ③ 더 이상의 fallback 없이 0 리턴
-        return 0
-    }*/
-
     fun extractTotalAmount(text: String): Int? {
         val lines = text.lines()
         val keyWords = listOf("총", "합계", "총액", "금액", "결제", "합", "받은금액", "받음", "받은 금액", "총금액")

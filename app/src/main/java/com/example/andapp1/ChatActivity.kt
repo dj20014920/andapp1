@@ -1,8 +1,10 @@
 package com.example.andapp1
 
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.ContentValues
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
@@ -29,10 +31,12 @@ import com.example.andapp1.databinding.ActivityChatBinding
 import com.example.andapp1.ocr.ReceiptOcrProcessor
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.storage.FirebaseStorage
 import com.stfalcon.chatkit.messages.*
 import kotlinx.coroutines.launch
 import java.io.File
 import android.Manifest
+import android.content.Context
 import android.R.attr.bitmap
 import android.R.attr.data
 import android.R.id.message
@@ -41,12 +45,10 @@ import android.graphics.BitmapFactory
 import android.widget.TextView
 import com.bumptech.glide.Glide
 import com.example.andapp1.DialogHelper.showParticipantsDialog
-import com.google.firebase.storage.FirebaseStorage
 import com.stfalcon.chatkit.commons.ImageLoader
 import org.opencv.android.OpenCVLoader
 import java.util.Date
 import androidx.lifecycle.Observer
-import android.content.Context
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.method.LinkMovementMethod
@@ -57,6 +59,8 @@ import android.view.Gravity
 import java.util.regex.Pattern
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 
 class ChatActivity : AppCompatActivity() {
@@ -75,6 +79,62 @@ class ChatActivity : AppCompatActivity() {
     private var messagesObserver: Observer<List<ChatMessage>>? = null
     private var lastMessageId: String? = null
     private var shownMessageIds = mutableSetOf<String>()
+    
+    // OCR 결과 브로드캐스트 리시버
+    private val ocrMessageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            Log.d("OCR_RECEIVER", "브로드캐스트 수신됨 - action: ${intent?.action}")
+            
+            if (intent?.action == "com.example.andapp1.SEND_CHAT_MESSAGE") {
+                val message = intent.getStringExtra("message")
+                val chatId = intent.getStringExtra("chatId")
+                val source = intent.getStringExtra("source")
+                val currentRoomCode = viewModel.roomCode
+                
+                Log.d("OCR_RECEIVER", "브로드캐스트 상세 정보:")
+                Log.d("OCR_RECEIVER", "  - 수신 chatId: '$chatId'")
+                Log.d("OCR_RECEIVER", "  - 현재 roomCode: '$currentRoomCode'")
+                Log.d("OCR_RECEIVER", "  - source: '$source'")
+                Log.d("OCR_RECEIVER", "  - message 길이: ${message?.length ?: 0}")
+                
+                // 채팅방 매칭 조건 (더 유연하게 처리)
+                val isTargetChatRoom = when {
+                    // 1. 정확히 일치하는 경우
+                    chatId == currentRoomCode -> {
+                        Log.d("OCR_RECEIVER", "✅ chatId와 roomCode 정확히 일치")
+                        true
+                    }
+                    // 2. chatId가 null인 경우 (현재 활성화된 채팅방으로 간주)
+                    chatId.isNullOrBlank() -> {
+                        Log.d("OCR_RECEIVER", "✅ chatId가 null/빈값 - 현재 채팅방으로 처리")
+                        true
+                    }
+                    // 3. 기타 경우
+                    else -> {
+                        Log.d("OCR_RECEIVER", "❌ 채팅방 불일치")
+                        false
+                    }
+                }
+                
+                Log.d("OCR_RECEIVER", "  - chatId 비교 결과: $isTargetChatRoom")
+                
+                // 조건 확인 후 메시지 전송
+                if (message != null && isTargetChatRoom && source == "ocr") {
+                    Log.d("OCR_RECEIVER", "✅ 모든 조건 만족 - OCR 메시지 전송 시작")
+                    sendChatMessage(message)
+                    
+                    Toast.makeText(this@ChatActivity, "💰 영수증 정산 결과가 전송되었습니다", Toast.LENGTH_SHORT).show()
+                } else {
+                    Log.w("OCR_RECEIVER", "❌ 조건 불만족 - 메시지 전송 안함")
+                    Log.w("OCR_RECEIVER", "  - message null? ${message == null}")
+                    Log.w("OCR_RECEIVER", "  - target chat? $isTargetChatRoom")
+                    Log.w("OCR_RECEIVER", "  - source ocr? ${source == "ocr"}")
+                }
+            } else {
+                Log.d("OCR_RECEIVER", "다른 액션의 브로드캐스트: ${intent?.action}")
+            }
+        }
+    }
 
     private fun openCamera() {
         // 📌 먼저 필요한 권한 목록
@@ -129,13 +189,185 @@ class ChatActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == 1011) {
-            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                openCamera() // 권한 허용되면 다시 openCamera 실행
-            } else {
-                Toast.makeText(this, "사진 촬영을 위해 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+        when (requestCode) {
+            1011 -> {
+                if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    openCamera() // 권한 허용되면 다시 openCamera 실행
+                } else {
+                    Toast.makeText(this, "사진 촬영을 위해 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            1010 -> {
+                Log.d("OCR_PERMISSIONS", "권한 요청 결과: ${grantResults.contentToString()}")
+                if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    Log.d("OCR_PERMISSIONS", "모든 권한 허용됨 - 카메라 실행")
+                    executeCameraCapture() // 권한 허용되면 바로 카메라 실행
+                } else {
+                    Log.d("OCR_PERMISSIONS", "권한 거부됨")
+                    val deniedPermissions = permissions.filterIndexed { index, _ -> 
+                        grantResults[index] != PackageManager.PERMISSION_GRANTED 
+                    }
+                    Log.d("OCR_PERMISSIONS", "거부된 권한들: ${deniedPermissions.joinToString(", ")}")
+                    
+                    // 설정으로 이동할 수 있는 다이얼로그 표시
+                    showPermissionSettingsDialog()
+                }
             }
         }
+    }
+    
+    private fun openOcrCamera() {
+        Log.d("OCR_PERMISSIONS", "=== 권한 체크 시작 ===")
+        
+        // 📌 먼저 카메라 권한 체크
+        val cameraPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+        Log.d("OCR_PERMISSIONS", "카메라 권한: ${if (cameraPermission == PackageManager.PERMISSION_GRANTED) "허용됨" else "거부됨"}")
+        
+        // 📌 Android 버전별 이미지 권한 체크 (더 강력한 검사)
+        val hasImagePermission = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+                // Android 13+ : READ_MEDIA_IMAGES 사용
+                val mediaImagesPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
+                Log.d("OCR_PERMISSIONS", "READ_MEDIA_IMAGES 권한: ${if (mediaImagesPermission == PackageManager.PERMISSION_GRANTED) "허용됨" else "거부됨"}")
+                
+                // 추가: MediaStore에 실제 접근 가능한지 테스트
+                val canAccessMediaStore = try {
+                    val cursor = contentResolver.query(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        arrayOf(MediaStore.Images.Media._ID),
+                        null,
+                        null,
+                        "${MediaStore.Images.Media.DATE_ADDED} DESC LIMIT 1"
+                    )
+                    val canAccess = cursor != null
+                    cursor?.close()
+                    Log.d("OCR_PERMISSIONS", "MediaStore 접근 테스트: ${if (canAccess) "성공" else "실패"}")
+                    canAccess
+                } catch (e: SecurityException) {
+                    Log.d("OCR_PERMISSIONS", "MediaStore 접근 테스트: SecurityException - ${e.message}")
+                    false
+                } catch (e: Exception) {
+                    Log.d("OCR_PERMISSIONS", "MediaStore 접근 테스트: Exception - ${e.message}")
+                    false
+                }
+                
+                mediaImagesPermission == PackageManager.PERMISSION_GRANTED && canAccessMediaStore
+            }
+            else -> {
+                // Android 12 이하 : READ_EXTERNAL_STORAGE 사용
+                val storagePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                Log.d("OCR_PERMISSIONS", "READ_EXTERNAL_STORAGE 권한: ${if (storagePermission == PackageManager.PERMISSION_GRANTED) "허용됨" else "거부됨"}")
+                storagePermission == PackageManager.PERMISSION_GRANTED
+            }
+        }
+        
+        // 📌 권한 체크 결과
+        if (cameraPermission != PackageManager.PERMISSION_GRANTED || !hasImagePermission) {
+            Log.d("OCR_PERMISSIONS", "권한 부족 - 요청 필요")
+            Log.d("OCR_PERMISSIONS", "카메라: ${cameraPermission == PackageManager.PERMISSION_GRANTED}, 이미지: $hasImagePermission")
+            
+            // 🔧 임시 해결책: 사용자에게 강제 실행 옵션 제공
+            AlertDialog.Builder(this)
+                .setTitle("⚠️ 권한 문제 감지")
+                .setMessage("권한이 허용되어 있음에도 불구하고 접근에 문제가 있습니다.\n\n" +
+                        "• 설정에서 권한을 다시 확인하거나\n" +
+                        "• 강제로 카메라를 실행해보세요.")
+                .setPositiveButton("강제 실행") { _, _ ->
+                    Log.d("OCR_PERMISSIONS", "사용자가 강제 실행 선택")
+                    executeCameraCapture()
+                }
+                .setNegativeButton("권한 설정") { _, _ ->
+                    requestOcrPermissions()
+                }
+                .setNeutralButton("앱 설정 열기") { _, _ ->
+                    showPermissionSettingsDialog()
+                }
+                .show()
+            return
+        }
+        
+        Log.d("OCR_PERMISSIONS", "모든 권한 허용됨 - 카메라 실행")
+        executeCameraCapture()
+    }
+    
+    private fun requestOcrPermissions() {
+        val permissions = mutableListOf<String>()
+        
+        // 카메라 권한
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.CAMERA)
+        }
+        
+        // Android 버전별 이미지 권한
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                    permissions.add(Manifest.permission.READ_MEDIA_IMAGES)
+                }
+            }
+            else -> {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+                }
+            }
+        }
+        
+        Log.d("OCR_PERMISSIONS", "요청할 권한들: ${permissions.joinToString(", ")}")
+        
+        if (permissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 1010)
+        } else {
+            // 모든 권한이 허용된 상태
+            executeCameraCapture()
+        }
+    }
+    
+    private fun executeCameraCapture() {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "receipt_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Receipts")
+            }
+        }
+
+        cameraImageUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+        if (cameraImageUri == null) {
+            Log.e("OCR_CAMERA", "❌ URI 생성 실패")
+            return
+        }
+
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+            putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
+            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        cameraIntentLauncher.launch(intent)
+    }
+    
+    private fun showPermissionSettingsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("🔒 권한 필요")
+            .setMessage("영수증 인식을 위해 다음 권한이 필요합니다:\n\n" +
+                    "• 📸 카메라: 영수증 촬영\n" +
+                    "• 🖼️ 사진/미디어: 이미지 저장 및 읽기\n\n" +
+                    "설정으로 이동하여 권한을 허용해주세요.")
+            .setPositiveButton("설정 열기") { _, _ ->
+                try {
+                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = android.net.Uri.fromParts("package", packageName, null)
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this, "설정 화면을 열 수 없습니다.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("취소") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun openGallery() {
@@ -199,9 +431,6 @@ class ChatActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 상단바 겹침 문제 해결을 위한 Window 설정
-        window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimaryDark)
-        
         if (!OpenCVLoader.initDebug()) {
             Log.e("OpenCV", "OpenCV initialization failed")
         } else {
@@ -216,6 +445,9 @@ class ChatActivity : AppCompatActivity() {
         val roomName = intent.getStringExtra("roomName") ?: "채팅방"
         setSupportActionBar(binding.toolbar)
         supportActionBar?.title = roomName
+        
+        // 동적 시스템 바 여백 조정 (각 기기마다 다른 상단바 높이 대응)
+        setupDynamicSystemBarInsets()
 
         viewModel = ViewModelProvider(this, ChatViewModelFactory(roomCode, applicationContext))[ChatViewModel::class.java]
 
@@ -225,7 +457,57 @@ class ChatActivity : AppCompatActivity() {
         }
         Log.d("정렬확인", "reverseLayout = ${layoutManager.reverseLayout}, stackFromEnd = ${layoutManager.stackFromEnd}")
         binding.messagesList.layoutManager = layoutManager
+        
+        // OCR 브로드캐스트 리시버 등록
+        val filter = IntentFilter("com.example.andapp1.SEND_CHAT_MESSAGE")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(ocrMessageReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(ocrMessageReceiver, filter)
+        }
+        
         initializeAdapterAndListeners()
+    }
+    
+    /**
+     * 동적 시스템 바 여백 조정
+     * 각 기기마다 다른 상단바 높이를 자동으로 감지해서 적절한 여백 적용
+     */
+    private fun setupDynamicSystemBarInsets() {
+        Log.d("SystemBarInsets", "동적 시스템 바 여백 조정 시작")
+        
+        // 상태바를 투명하게 하고 콘텐츠가 상태바 아래로 확장되도록 설정 (최신 방식)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or 
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            )
+        }
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            // 시스템 바 인셋 정보 가져오기
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val statusBarHeight = systemBars.top
+            val navigationBarHeight = systemBars.bottom
+            
+            Log.d("SystemBarInsets", "감지된 상단바 높이: ${statusBarHeight}px")
+            Log.d("SystemBarInsets", "감지된 네비게이션바 높이: ${navigationBarHeight}px")
+            
+            // Toolbar에 동적 마진 적용
+            val toolbarParams = binding.toolbar.layoutParams as ViewGroup.MarginLayoutParams
+            toolbarParams.topMargin = statusBarHeight
+            binding.toolbar.layoutParams = toolbarParams
+            
+            Log.d("SystemBarInsets", "Toolbar 마진 조정 완료 - 상단: ${statusBarHeight}px")
+            Log.d("SystemBarInsets", "동적 시스템 바 여백 조정 완료")
+            
+            // 원본 인셋 반환
+            insets
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -360,28 +642,28 @@ class ChatActivity : AppCompatActivity() {
 
     private fun initializeAdapterAndListeners() {
         lifecycleScope.launch {
-            // 1) DB에서 currentUser 불러오기
-            Log.d("ChatActivity_UserLoad", "🔍 사용자 정보 로딩 시작...")
+            Log.d("ChatActivity_UserLoad", "사용자 정보 로드 시작")
             
+            // 1) DB에서 currentUser 불러오기
             val user = try {
                 RoomDatabaseInstance
                     .getInstance(applicationContext)
                     .userDao()
                     .getUser()
             } catch (e: Exception) {
-                Log.e("ChatActivity_UserLoad", "❌ DB에서 사용자 정보 로딩 실패", e)
+                Log.e("ChatActivity_UserLoad", "사용자 정보 DB 조회 실패", e)
                 null
             }
             
-            Log.d("ChatActivity_UserLoad", "👤 로딩된 사용자 정보: ${user?.let { "ID=${it.id}, Name=${it.nickname}" } ?: "null"}")
-            
             currentUser = user
+            
+            Log.d("ChatActivity_UserLoad", "DB 조회 결과 - user: ${user?.let { "ID: ${it.id}, Nickname: ${it.nickname}" } ?: "null"}")
 
             if (user == null) {
-                Log.e("ChatActivity_UserLoad", "❌ 사용자 정보가 null입니다. 로그인 화면으로 이동합니다.")
-                Toast.makeText(this@ChatActivity, "⚠️ 사용자 정보를 불러오지 못했습니다.\n다시 로그인해주세요.", Toast.LENGTH_LONG).show()
+                Log.w("ChatActivity_UserLoad", "사용자 정보가 null입니다. 로그인 상태를 확인하세요.")
+                Toast.makeText(this@ChatActivity, "⚠ 사용자 정보를 불러오지 못했습니다. 다시 로그인해주세요.", Toast.LENGTH_LONG).show()
                 
-                // 로그인 화면으로 이동
+                // 로그인 화면으로 돌아가기
                 val intent = Intent(this@ChatActivity, LoginActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 startActivity(intent)
@@ -390,10 +672,10 @@ class ChatActivity : AppCompatActivity() {
             }
 
             senderId = user.id
-            Log.d("ChatActivity_UserLoad", "✅ 사용자 정보 로딩 완료. senderId = $senderId")
+            Log.d("ChatActivity_UserLoad", "senderId 설정 완료: $senderId")
 
-            // 2) 참가자 권한 확인
-            Log.d("ChatActivity_Participants", "🔍 참가자 권한 확인 시작: Room=${viewModel.roomCode}, User=${user.id}")
+            // 2) Firebase 참여자 확인
+            Log.d("ChatActivity_Participants", "Firebase 참여자 확인 시작 - User: ${user.id}, Room: ${viewModel.roomCode}")
             
             val participantsRef = FirebaseDatabase.getInstance()
                 .getReference("rooms")
@@ -402,148 +684,124 @@ class ChatActivity : AppCompatActivity() {
                 .child(user.id)
 
             participantsRef.get().addOnSuccessListener { snapshot ->
-                Log.d("ChatActivity_Participants", "📱 참가자 스냅샷 수신: key=${snapshot.key}, exists=${snapshot.exists()}")
-                Log.d("ChatActivity_Participants", "📱 스냅샷 값: ${snapshot.value}")
-                
+                Log.d("ChatActivity_Participants", "참가자 스냅샷 수신. key: ${snapshot.key}, exists: ${snapshot.exists()}")
                 if (!snapshot.exists()) {
-                    Log.w("ChatActivity_Participants", "❌ 참가자 정보 없음 - 채팅방 입장 거부")
-                    Toast.makeText(this@ChatActivity, "⚠️ 참여하지 않은 채팅방입니다.\n채팅방 코드를 다시 확인해주세요.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ChatActivity, "⚠ 이미 나간 채팅방이거나 참여자 정보 없음.", Toast.LENGTH_SHORT).show()
+                    Log.w("ChatActivity_Participants", "참가자가 아니므로 finish() 호출됨. User ID: ${user.id}, Room Code: ${viewModel.roomCode}")
                     finish() // 🚫 채팅방 입장 금지
                 } else {
-                    Log.d("ChatActivity_Participants", "✅ 참가자 확인 완료 - 채팅방 입장 허용")
-                    // 어댑터 초기화는 참가자 확인 후에만 실행
-                    initializeChatAdapter()
+                    Log.d("ChatActivity_Participants", "✅ 참가자 확인 완료. User ID: ${user.id}, Room Code: ${viewModel.roomCode}")
                 }
             }.addOnFailureListener { exception ->
-                Log.e("ChatActivity_Participants", "❌ 참가자 정보 로드 실패", exception)
-                Toast.makeText(this@ChatActivity, "⚠️ 네트워크 연결을 확인해주세요.\n잠시 후 다시 시도해보세요.", Toast.LENGTH_LONG).show()
-                
-                // 3초 후 자동으로 다시 시도
-                Handler(Looper.getMainLooper()).postDelayed({
-                    if (!isFinishing && !isDestroyed) {
-                        recreate() // 액티비티 재시작
+                Log.e("ChatActivity_Participants", "참가자 정보 로드 실패: ${exception.message}", exception)
+                Toast.makeText(this@ChatActivity, "⚠ 참가자 정보를 가져오는데 실패했습니다.", Toast.LENGTH_SHORT).show()
+                // 실패 시에도 일단 진행 (네트워크 문제일 수 있음)
+            }
+
+            // ✅ 커스텀 ViewHolder 사용
+            val holders = MessageHolders()
+                .setIncomingTextHolder(
+                    CustomIncomingTextViewHolder::class.java,
+                    R.layout.item_incoming_text_message
+                )
+                .setIncomingImageHolder(
+                    CustomIncomingImageViewHolder::class.java,
+                    R.layout.item_incoming_image_message
+                )
+                // outcoming은 기본 사용 (프로필 이미지 없음)
+                .setOutcomingTextHolder(
+                    TextMessageViewHolder::class.java,
+                    com.stfalcon.chatkit.R.layout.item_outcoming_text_message
+                )
+                .setOutcomingImageHolder(
+                    OutcomingImageMessageViewHolder::class.java,
+                    R.layout.item_outcoming_image_message
+                )
+
+            // 3) 어댑터 생성
+            adapter = MessagesListAdapter<ChatMessage>(
+                senderId,
+                holders,
+                ImageLoader { imageView, url, _ ->
+                    // ✅ 디버깅 로그 추가
+                    Log.d("ProfileDebug", "=== ImageLoader 호출됨 ===")
+                    Log.d("ProfileDebug", "ImageView: $imageView")
+                    Log.d("ProfileDebug", "URL: $url")
+
+                    if (!url.isNullOrEmpty()) {
+                        Log.d("ProfileDebug", "Glide로 이미지 로드 시작: $url")
+                        Glide.with(imageView.context)
+                            .load(url)
+                            .error(R.drawable.ic_launcher_background) // 에러 시 기본 이미지 표시
+                            .into(imageView)
+                    } else {
+                        Log.w("ProfileDebug", "URL이 비어있어서 기본 이미지 설정")
+                        imageView.setImageResource(R.drawable.ic_launcher_background) // 기본 이미지
                     }
-                }, 3000)
-            }
-        }
-    }
-
-    private fun initializeChatAdapter() {
-        Log.d("ChatActivity_Adapter", "🔧 채팅 어댑터 초기화 시작...")
-        
-        val user = currentUser ?: return
-
-        // ✅ 커스텀 ViewHolder 사용
-        val holders = MessageHolders()
-            .setIncomingTextHolder(
-                CustomIncomingTextViewHolder::class.java,
-                R.layout.item_incoming_text_message
-            )
-            .setIncomingImageHolder(
-                CustomIncomingImageViewHolder::class.java,
-                R.layout.item_incoming_image_message
-            )
-            // outcoming은 기본 사용 (프로필 이미지 없음)
-            .setOutcomingTextHolder(
-                TextMessageViewHolder::class.java,
-                com.stfalcon.chatkit.R.layout.item_outcoming_text_message
-            )
-            .setOutcomingImageHolder(
-                OutcomingImageMessageViewHolder::class.java,
-                R.layout.item_outcoming_image_message
+                }
             )
 
-        // 어댑터 생성
-        adapter = MessagesListAdapter<ChatMessage>(
-            senderId,
-            holders,
-            ImageLoader { imageView, url, _ ->
-                // ✅ 디버깅 로그 추가
-                Log.d("ProfileDebug", "=== ImageLoader 호출됨 ===")
-                Log.d("ProfileDebug", "ImageView: $imageView")
-                Log.d("ProfileDebug", "URL: $url")
+            binding.messagesList.setAdapter(adapter)
 
-                if (!url.isNullOrEmpty()) {
-                    Log.d("ProfileDebug", "Glide로 이미지 로드 시작: $url")
-                    Glide.with(imageView.context)
-                        .load(url)
-                        .error(R.drawable.ic_launcher_background) // 에러 시 기본 이미지 표시
-                        .into(imageView)
-                } else {
-                    Log.w("ProfileDebug", "URL이 비어있어서 기본 이미지 설정")
-                    imageView.setImageResource(R.drawable.ic_launcher_background) // 기본 이미지
+            // 메시지 클릭 (텍스트 메시지용)
+            adapter.setOnMessageClickListener { message: ChatMessage ->
+                val imageUrl = message.imageUrlValue
+                Log.d("💥클릭된 메시지", "imageUrlValue = $imageUrl")
+
+                // 📸 이미지 메시지만 처리 (텍스트 메시지는 TextMessageViewHolder에서 처리)
+                if (!imageUrl.isNullOrEmpty()) {
+                    val urls = imageMessages
+                    val idx = urls.indexOf(imageUrl)
+
+                    val photoListToSend = if (idx != -1) {
+                        ArrayList(urls)
+                    } else {
+                        arrayListOf(imageUrl)
+                    }
+
+                    val position = if (idx != -1) idx else 0
+
+                    Log.d("ChatActivity", "▶︎ 이미지 클릭 → photoList=$photoListToSend, index=$position")
+
+                    val intent = Intent(this@ChatActivity, ImageViewerActivity::class.java)
+                        .putStringArrayListExtra("photoList", photoListToSend)
+                        .putExtra("startPosition", position)
+
+                    startActivity(intent)
                 }
             }
-        )
 
-        binding.messagesList.setAdapter(adapter)
+            // 텍스트 전송 버튼
+            binding.customMessageInput.setInputListener { input ->
+                viewModel.sendMessage(input.toString())
 
-        // 메시지 클릭 (텍스트 메시지용)
-        adapter.setOnMessageClickListener { message: ChatMessage ->
-            val imageUrl = message.imageUrlValue
-            Log.d("💥클릭된 메시지", "imageUrlValue = $imageUrl")
-
-            // 📸 이미지 메시지만 처리 (텍스트 메시지는 TextMessageViewHolder에서 처리)
-            if (!imageUrl.isNullOrEmpty()) {
-                val urls = imageMessages
-                val idx = urls.indexOf(imageUrl)
-
-                val photoListToSend = if (idx != -1) {
-                    ArrayList(urls)
-                } else {
-                    arrayListOf(imageUrl)
+                // 🔽 메시지 전송 후 자동 스크롤 추가
+                binding.messagesList.post {
+                    layoutManager.scrollToPositionWithOffset(adapter.itemCount - 1, 0)
                 }
-
-                val position = if (idx != -1) idx else 0
-
-                Log.d("ChatActivity", "▶︎ 이미지 클릭 → photoList=$photoListToSend, index=$position")
-
-                val intent = Intent(this@ChatActivity, ImageViewerActivity::class.java)
-                    .putStringArrayListExtra("photoList", photoListToSend)
-                    .putExtra("startPosition", position)
-
-                startActivity(intent)
+                true
             }
-        }
 
-        // 텍스트 전송 버튼
-        binding.customMessageInput.setInputListener { input ->
-            viewModel.sendMessage(input.toString())
-
-            // 🔽 메시지 전송 후 자동 스크롤 추가
-            binding.messagesList.post {
-                layoutManager.scrollToPositionWithOffset(adapter.itemCount - 1, 0)
-            }
-            true
-        }
-
-        // 사진 버튼
-        binding.btnSendPhoto.setOnClickListener {
-            val options = arrayOf("사진 촬영", "갤러리에서 선택")
-            AlertDialog.Builder(this@ChatActivity)
-                .setTitle("사진 선택")
-                .setItems(options) { _, which ->
+            // 사진 버튼
+            binding.btnSendPhoto.setOnClickListener {
+                val options = arrayOf("📸 사진 촬영", "🖼️ 갤러리에서 선택")
+                DialogHelper.showStyledChoiceDialog(
+                    context = this@ChatActivity,
+                    title = "사진 전송 방법 선택",
+                    options = options
+                ) { which ->
                     if (which == 0) openCamera() else openGallery()
                 }
-                .show()
+            }
+            // 메시지 옵저빙 시작
+            observeMessages()
         }
-        
-        // 메시지 옵저빙 시작
-        observeMessages()
     }
 
     private fun observeMessages() {
         viewModel.messages.observe(this) { messages ->
-            Log.d("ProfileDebug", "=== observeMessages 호출됨 ===")
-            Log.d("ProfileDebug", "받은 메시지 개수: ${messages.size}")
 
-            // ✅ 각 메시지의 프로필 이미지 URL 확인
-            messages.forEach { message ->
-                Log.d("ProfileDebug", "메시지 ID: ${message.messageId}")
-                Log.d("ProfileDebug", "사용자: ${message.getUser().getName()} (${message.getUser().getId()})")
-                Log.d("ProfileDebug", "프로필 이미지: ${message.getUser().getAvatar()}")
-                Log.d("ProfileDebug", "---")
-            }
+
 
             val sorted = messages
                 .filter { it.messageId.isNotBlank() }
@@ -551,7 +809,6 @@ class ChatActivity : AppCompatActivity() {
                 .sortedBy { it.createdAt.time }
                 .reversed() // ✅ 최신이 아래로 오도록 보장
 
-            Log.d("ProfileDebug", "정렬된 메시지 개수: ${sorted.size}")
 
             adapter.setItems(sorted)
 
@@ -575,43 +832,29 @@ class ChatActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.menu_chat, menu)
+        // 메뉴 XML을 사용하지 않고 직접 메뉴 아이템 추가
+        menu?.add(0, 1001, 0, "메뉴")?.apply {
+            setIcon(R.drawable.ic_menu)
+            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        }
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.menu_receipt_ocr -> {
-                showOcrChoiceDialog()
-                true
-            }
-            R.id.menu_participants -> {
-                // 참여자 목록 다이얼로그 띄우기
-                DialogHelper.showParticipantsDialog(this, viewModel.roomCode)
-                true
-            }
-            R.id.menu_open_map -> {
-                // ✅ 지도 액티비티로 이동
-                val intent = Intent(this, MapActivity::class.java)
-                intent.putExtra("roomCode", viewModel.roomCode) // 채팅방 코드 넘기기 (필요 시)
-                startActivity(intent)
-                return true
-            }
-            R.id.menu_scrap_list -> {
-                // 스크랩 목록 다이얼로그 띄우기 (또는 액티비티 이동)
-                ScrapDialogHelper.showScrapListDialog(this, viewModel.roomCode)
-                true
-            }
-            //  사진첩 메뉴
-            R.id.menu_photo_gallery -> {
-                val intent = Intent(this, PhotoGalleryActivity::class.java).apply {
+            1001 -> {
+                // 새로운 채팅방 메뉴 액티비티로 이동
+                val intent = Intent(this, ChatRoomMenuActivity::class.java).apply {
                     putExtra("roomCode", viewModel.roomCode)
                     putExtra("roomName", supportActionBar?.title?.toString() ?: "채팅방")
                 }
                 startActivity(intent)
                 true
             }
-
+            android.R.id.home -> {
+                finish()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -619,61 +862,23 @@ class ChatActivity : AppCompatActivity() {
     private fun showOcrChoiceDialog() {
         val options = arrayOf("📸 사진 촬영", "🖼️ 갤러리에서 선택")
 
-        AlertDialog.Builder(this)
-            .setTitle("영수증 분석 방법 선택")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> {
-                        Log.d("OCR_CAMERA", "📸 사진 촬영 선택됨")
+        DialogHelper.showStyledChoiceDialog(
+            context = this,
+            title = "영수증 인식 방법 선택",
+            options = options
+        ) { which ->
+            when (which) {
+                0 -> {
+                    Log.d("OCR_CAMERA", "📸 사진 촬영 선택됨")
+                    openOcrCamera()
+                }
 
-                        // ✅ 권한 요청 추가 (Android 13 이상 대응)
-                        val permissions: MutableList<String> = mutableListOf(
-                            Manifest.permission.CAMERA,
-                            Manifest.permission.READ_MEDIA_IMAGES
-                        )
-
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                            permissions.add(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
-                        }
-                        ActivityCompat.requestPermissions(
-                            this,
-                            permissions.toTypedArray(),
-                            1010 // 예시: 요청 코드 상수 (원하는 번호 사용 가능)
-                        )
-
-                        // 아래는 기존 코드
-                        val contentValues = ContentValues().apply {
-                            put(MediaStore.Images.Media.DISPLAY_NAME, "receipt_${System.currentTimeMillis()}.jpg")
-                            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Receipts")
-                            }
-                        }
-
-                        cameraImageUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-
-                        if (cameraImageUri == null) {
-                            Log.e("OCR_CAMERA", "❌ URI 생성 실패")
-                            return@setItems
-                        }
-
-                        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                            putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
-                            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-
-                        cameraIntentLauncher.launch(intent)
-                    }
-
-                    1 -> {
-                        Log.d("OCR_CAMERA", "🖼️ 사진 선택 선택됨")
-                        receiptImageLauncher.launch("image/*")
-                    }
+                1 -> {
+                    Log.d("OCR_CAMERA", "🖼️ 사진 선택 선택됨")
+                    receiptImageLauncher.launch("image/*")
                 }
             }
-            .setNegativeButton("취소", null)
-            .show()
+        }
     }
 
     private fun processOcrWithPeopleInput(bitmap: Bitmap) {
@@ -764,7 +969,13 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun sendChatMessage(message: String) {
+        Log.d("ChatActivity", "📤 OCR 메시지 전송 시작: $message")
         viewModel.sendMessage(message)
+        
+        // 메시지 전송 후 자동 스크롤
+        binding.messagesList.post {
+            layoutManager.scrollToPositionWithOffset(adapter.itemCount - 1, 0)
+        }
     }
 
     private fun sendImageMessage(imageUrl: String) {
@@ -793,6 +1004,15 @@ class ChatActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        
+        // OCR 브로드캐스트 리시버 해제
+        try {
+            unregisterReceiver(ocrMessageReceiver)
+            Log.d("ChatActivity_Lifecycle", "OCR 브로드캐스트 리시버 해제 완료")
+        } catch (e: Exception) {
+            Log.w("ChatActivity_Lifecycle", "OCR 브로드캐스트 리시버 해제 실패: ${e.message}")
+        }
+        
         Log.d("ChatActivity_Lifecycle", "onDestroy 호출됨", Exception("onDestroy Call Stack"))
     }
 

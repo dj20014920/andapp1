@@ -9,6 +9,7 @@
     <!-- 화이트 계열 -->
     <color name="white">#ffffff</color>
     <color name="white60">#a0ffffff</color>
+    <color name="white_60">#a0ffffff</color>
     <color name="white_two">#efefef</color>
     <color name="white_three">#ebebeb</color>
     <color name="white_four">#e0e0e0</color>
@@ -88,5 +89,16 @@
     <color name="pastel_red_50">#FFEBEE</color>
     <color name="pastel_red_200">#EF9A9A</color>
     <color name="status_text_background_color">#E8F5E8</color>
+    
+    <!-- 누락된 필수 색상들 -->
+    <color name="pastel_green_100">#C8E6C9</color>
+    <color name="pastel_yellow_100">#FFF9C4</color>
+    <color name="pastel_yellow_200">#FFD54F</color>
+    <color name="pastel_purple_100">#E1BEE7</color>
+    <color name="pastel_purple_200">#BA68C8</color>
+    <color name="pastel_orange_100">#FFE0B2</color>
+    <color name="pastel_orange_200">#FFB74D</color>
+    <color name="gray_100">#F5F5F5</color>
+    <color name="gray_600">#757575</color>
 
 </resources>

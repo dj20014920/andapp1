@@ -160,42 +160,27 @@ class ChatRoomMenuActivity : AppCompatActivity() {
             roomCode = roomCode,
             roomTitle = roomName,
             lastActivityTime = System.currentTimeMillis().toString(),
-            isFavorite = false,
-            participants = emptyMap()
+            isFavorite = false
         )
 
         DialogHelper.showStyledRoomOptionsDialog(
             context = this,
             room = room,
-            onChangeNameClick = {
+            onEdit = {
                 DialogHelper.showChangeNameDialog(this, room) { newName ->
                     updateRoomName(newName)
                 }
             },
-            onParticipantsClick = {
+            onParticipants = {
                 DialogHelper.showStyledParticipantsDialog(this, roomCode)
             },
-            onInviteCodeClick = {
-                DialogHelper.showStyledConfirmDialog(
-                    context = this,
-                    title = "초대 코드",
-                    message = "채팅방 코드: $roomCode\n\n이 코드를 친구들과 공유하여 채팅방에 초대하세요.",
-                    positiveText = "복사하기",
-                    onPositive = {
-                        val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        val clip = android.content.ClipData.newPlainText("roomCode", roomCode)
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(this, "초대 코드가 복사되었습니다", Toast.LENGTH_SHORT).show()
-                    }
-                )
-            },
-            onLeaveRoomClick = {
+            onLeave = {
                 DialogHelper.showStyledConfirmDialog(
                     context = this,
                     title = "채팅방 나가기",
                     message = "정말로 이 채팅방을 나가시겠습니까?\n나간 후에는 대화 내용을 볼 수 없습니다.",
                     positiveText = "나가기",
-                    onPositive = {
+                    onConfirm = {
                         leaveRoom()
                     }
                 )

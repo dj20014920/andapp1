@@ -155,5 +155,114 @@ object DialogHelper {
             .setNegativeButton("취소", null)
             .show()
     }
+    
+    // 스타일이 적용된 참여자 다이얼로그
+    fun showStyledParticipantsDialog(context: Context, roomCode: String) {
+        val participantsRef = FirebaseDatabase.getInstance()
+            .getReference("rooms")
+            .child(roomCode)
+            .child("participants")
+
+        participantsRef.get().addOnSuccessListener { snapshot ->
+            val userIds = snapshot.children.mapNotNull { it.key }
+
+            if (userIds.isEmpty()) {
+                showStyledDialog(context, "참여자 목록", "참여자가 없습니다.")
+                return@addOnSuccessListener
+            }
+
+            val usersRef = FirebaseDatabase.getInstance().getReference("users")
+            val participantNames = mutableListOf<String>()
+
+            var loadedCount = 0
+            for (userId in userIds) {
+                usersRef.child(userId).get().addOnSuccessListener { userSnapshot ->
+                    val nickname = userSnapshot.child("nickname").getValue(String::class.java) ?: "알 수 없음"
+                    participantNames.add("👤 $nickname")
+                    loadedCount++
+
+                    if (loadedCount == userIds.size) {
+                        showStyledDialog(context, "💬 참여자 목록 (${participantNames.size}명)", participantNames.joinToString("\n"))
+                    }
+                }
+            }
+        }.addOnFailureListener {
+            showStyledDialog(context, "⚠️ 오류", "참여자 목록을 불러오지 못했습니다.")
+        }
+    }
+    
+    // 스타일이 적용된 확인 다이얼로그
+    fun showStyledConfirmDialog(
+        context: Context, 
+        title: String, 
+        message: String, 
+        positiveText: String = "확인",
+        onConfirm: () -> Unit
+    ) {
+        AlertDialog.Builder(context)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(positiveText) { _, _ -> onConfirm() }
+            .setNegativeButton("취소", null)
+            .setCancelable(true)
+            .create()
+            .apply {
+                setOnShowListener {
+                    getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
+                        setTextColor(context.getColor(R.color.primary_color))
+                        textSize = 16f
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    }
+                    getButton(AlertDialog.BUTTON_NEGATIVE)?.apply {
+                        setTextColor(context.getColor(R.color.on_surface_variant))
+                        textSize = 16f
+                    }
+                }
+                show()
+            }
+    }
+    
+    // 스타일이 적용된 일반 다이얼로그
+    fun showStyledDialog(context: Context, title: String, message: String) {
+        AlertDialog.Builder(context)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("확인", null)
+            .setCancelable(true)
+            .create()
+            .apply {
+                setOnShowListener {
+                    getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
+                        setTextColor(context.getColor(R.color.primary_color))
+                        textSize = 16f
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    }
+                }
+                show()
+            }
+    }
+    
+    // 스타일이 적용된 채팅방 옵션 다이얼로그
+    fun showStyledRoomOptionsDialog(
+        context: Context,
+        room: Room,
+        onEdit: () -> Unit,
+        onParticipants: () -> Unit,
+        onLeave: () -> Unit
+    ) {
+        val options = arrayOf("✏️ 채팅방 이름 변경", "👥 참여자 보기", "🚪 채팅방 나가기")
+        
+        AlertDialog.Builder(context)
+            .setTitle("⚙️ ${room.roomTitle} 설정")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> onEdit()
+                    1 -> onParticipants()
+                    2 -> onLeave()
+                }
+            }
+            .setNegativeButton("취소", null)
+            .show()
+    }
 
 }

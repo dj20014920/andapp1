@@ -42,12 +42,11 @@ object AdaptiveReceiptProcessor {
      */
     fun analyzeReceiptQuality(bitmap: Bitmap): ReceiptQuality {
         return try {
-            val analysis = ImageUtils.analyzeImageQuality(bitmap)
+            val qualityScore = ImageUtils.analyzeImageQuality(bitmap)
             when {
-                analysis.brightness < 0.3 -> ReceiptQuality.TOO_DARK
-                analysis.brightness > 0.8 -> ReceiptQuality.TOO_BRIGHT
-                analysis.sharpness < 0.4 -> ReceiptQuality.BLURRY
-                analysis.resolution < 800 -> ReceiptQuality.LOW_RESOLUTION
+                qualityScore < 0.4 -> ReceiptQuality.LOW_RESOLUTION
+                qualityScore < 0.6 -> ReceiptQuality.BLURRY
+                qualityScore < 0.8 -> ReceiptQuality.TOO_DARK
                 else -> ReceiptQuality.GOOD
             }
         } catch (e: Exception) {

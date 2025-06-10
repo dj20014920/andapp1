@@ -137,7 +137,10 @@ object ReceiptOcrProcessor {
             }
 
             Log.d(TAG, "Tesseract setVariable 및 setPageSegMode 설정 시도")
-            tess.setVariable("tessedit_char_whitelist", "0123456789,원합계총액금액")
+            tess.setVariable("tessedit_char_whitelist", "0123456789,원합계총액금액가격세부카드현금" + 
+                                                                 "받은받음지불지불액신용체크네이버페이카카오페이토스" +
+                                                                 "서비스공급공급가부가가치포인트결제승인취소환불할인" + 
+                                                                 "().:- ")
             tess.pageSegMode = TessBaseAPI.PageSegMode.PSM_SINGLE_COLUMN
             Log.d(TAG, "Tesseract 이미지 설정 시도")
             tess.setImage(processedBmp)

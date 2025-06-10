@@ -209,12 +209,22 @@ class TesseractManager private constructor(private val context: Context) {
             tessApi.setVariable("load_bigram_dawg", "false")
             Log.d(TAG, "딕셔너리 완전 비활성화 - 숫자 오인식 방지")
             
-            // ⭐ 핵심 개선 4: 문자 화이트리스트 최적화 (웹서핑 권장)
+            // ⭐ 핵심 개선 4: 문자 화이트리스트 최적화 (실용적 설정)
             tessApi.setVariable("tessedit_char_whitelist", 
-                "0123456789" +          // 숫자만 (최우선)
-                "원" +                  // "원" 글자만 허용
-                ", ")                   // 최소한의 구분자
-            Log.d(TAG, "문자 화이트리스트: 숫자+원+쉼표만 허용")
+                "0123456789" +          // 숫자
+                "원" +                  // 원화 표시
+                "," +                   // 천단위 구분자
+                " " +                   // 공백
+                "총액합계금액" +          // 영수증 핵심 키워드  
+                "가격부가세" +            // 추가 키워드
+                "계산" +                // 추가 키워드
+                "." +                   // 소수점
+                "-" +                   // 마이너스
+                "(" +                   // 괄호
+                ")" +                   // 괄호
+                ":" +                   // 콜론
+                "\\n")                  // 줄바꿈
+            Log.d(TAG, "문자 화이트리스트: 숫자+한글키워드+구분자 허용")
             
             // ⭐ 핵심 개선 5: 모든 보정 기능 비활성화 (웹서핑 권장)
             tessApi.setVariable("tessedit_enable_dict_correction", "false")

@@ -894,27 +894,7 @@ class OcrActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("💸 경비 추가")
             .setView(dialogView)
-            .setPositiveButton("저장 및 카테고리") { _, _ ->
-                val finalAmount = amountEditText.text.toString().toIntOrNull() ?: amount
-                val finalDescription = descriptionEditText.text.toString().trim().let { desc ->
-                    if (desc.isBlank()) {
-                        when (categories[categorySpinner.selectedItemPosition]) {
-                            "🍽️ 식비" -> "식당"
-                            "☕ 카페" -> "카페"
-                            "🏨 숙박" -> "숙박비"
-                            "🚗 교통비" -> "교통비"
-                            "⛽ 주유" -> "주유비"
-                            "🚙 렌트카" -> "렌트카"
-                            "🎢 관광/액티비티" -> "관광"
-                            "🛒 마트/편의점" -> "쇼핑"
-                            else -> "기타 경비"
-                        }
-                    } else desc
-                }
-                val finalCategory = categories[categorySpinner.selectedItemPosition]
-                
-            }
-            .setNegativeButton("저장만") { _, _ ->
+            .setNegativeButton("저장") { _, _ ->
                 val finalAmount = amountEditText.text.toString().toIntOrNull() ?: amount
                 val finalDescription = descriptionEditText.text.toString().trim().let { desc ->
                     if (desc.isBlank()) "영수증 항목" else desc

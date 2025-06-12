@@ -3,12 +3,12 @@
     android:shape="rectangle">
     <solid android:color="@color/card_background_pastel" />
     <corners android:radius="12dp" />
-    <stroke 
-        android:width="1dp" 
+    <stroke
+        android:width="1dp"
         android:color="@color/pastel_blue_50" />
-    <padding 
+    <padding
         android:left="8dp"
         android:top="8dp"
         android:right="8dp"
         android:bottom="8dp" />
-</shape> 
+</shape>

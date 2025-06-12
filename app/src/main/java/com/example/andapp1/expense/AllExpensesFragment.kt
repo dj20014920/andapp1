@@ -234,7 +234,6 @@ class AllExpensesFragment : Fragment() {
                 )
                 
                 viewModel.addExpense(expense)
-                viewModel.refreshData(chatId)
                 
                 Toast.makeText(requireContext(), "✅ 경비가 추가되었습니다.", Toast.LENGTH_SHORT).show()
                 

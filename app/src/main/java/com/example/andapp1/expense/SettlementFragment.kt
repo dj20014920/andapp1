@@ -10,6 +10,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.andapp1.databinding.FragmentSettlementBinding
 import java.text.NumberFormat
 import java.util.*
+import androidx.lifecycle.lifecycleScope
+import com.example.andapp1.FirebaseRoomManager
+import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.launch
 
 class SettlementFragment : Fragment() {
     
@@ -85,40 +89,96 @@ class SettlementFragment : Fragment() {
             calculateAndDisplaySettlement(expenses)
         }
     }
-    
+
     private fun calculateAndDisplaySettlement(expenses: List<ExpenseItem>) {
-        if (expenses.isEmpty()) {
-            showEmptyState()
-            return
+        // 경비가 없더라도 참여자 수는 항상 체크!
+        FirebaseRoomManager.roomsRef.child(chatId).child("participants").get()
+            .addOnSuccessListener { snapshot ->
+                val participantCount = snapshot.childrenCount.toInt()
+                android.util.Log.d("정산참여자수", "participants = $participantCount, chatId = $chatId")
+
+                val totalAmount = expenses.sumOf { it.amount }
+                val amountPerPerson = if (participantCount > 0) totalAmount / participantCount else 0
+
+                binding.apply {
+                    totalAmountText.text = formatCurrency(totalAmount)
+                    participantCountText.text = "${participantCount}명"
+                    amountPerPersonText.text = formatCurrency(amountPerPerson)
+
+                    // empty/정산 레이아웃 분기
+                    if (expenses.isEmpty()) {
+                        emptyStateLayout.visibility = View.VISIBLE
+                        settlementContentLayout.visibility = View.GONE
+                    } else {
+                        emptyStateLayout.visibility = View.GONE
+                        settlementContentLayout.visibility = View.VISIBLE
+                    }
+                }
+
+                if (expenses.isNotEmpty()) {
+                    val userExpenses = mutableMapOf<String, Int>()
+                    val userIdToNickname = mutableMapOf<String, String>()
+                    val userIdList = mutableListOf<String>()
+
+                    // 1. 먼저 userId 리스트 수집
+                    snapshot.children.forEach { participantSnapshot ->
+                        val userId = participantSnapshot.key ?: ""
+                        userIdList.add(userId)
+                        val nickname = participantSnapshot.child("nickname").getValue(String::class.java)
+                        if (nickname != null) {
+                            userIdToNickname[userId] = nickname
+                        }
+                    }
+
+                    // 2. users 테이블에서 닉네임 fallback 조회 (필요한 경우에만)
+                    if (userIdToNickname.size < userIdList.size) {
+                        // 비동기 처리 필요. 모두 가져온 뒤에 settlement 처리!
+                        val usersRef = FirebaseDatabase.getInstance().getReference("users")
+                        val pending = userIdList.filter { !userIdToNickname.containsKey(it) }
+                        var count = 0
+
+                        if (pending.isEmpty()) {
+                            // 바로 settlement 진행
+                            applySettlementWithNicknames(userIdToNickname, expenses, amountPerPerson)
+                        } else {
+                            pending.forEach { userId ->
+                                usersRef.child(userId).child("nickname").get().addOnSuccessListener { userSnap ->
+                                    val name = userSnap.getValue(String::class.java) ?: userId
+                                    userIdToNickname[userId] = name
+                                    count++
+                                    if (count == pending.size) {
+                                        applySettlementWithNicknames(userIdToNickname, expenses, amountPerPerson)
+                                    }
+                                }.addOnFailureListener {
+                                    userIdToNickname[userId] = userId
+                                    count++
+                                    if (count == pending.size) {
+                                        applySettlementWithNicknames(userIdToNickname, expenses, amountPerPerson)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        applySettlementWithNicknames(userIdToNickname, expenses, amountPerPerson)
+                    }
+                }
+            }
+    }
+
+    private fun applySettlementWithNicknames(
+        userIdToNickname: Map<String, String>,
+        expenses: List<ExpenseItem>,
+        amountPerPerson: Int
+    ) {
+        val userExpenses = userIdToNickname.mapValues { (userId, nickname) ->
+            expenses.filter { it.userId == userId }.sumOf { it.amount }
+        }.mapKeys { (userId, _) ->
+            userIdToNickname[userId] ?: userId // UI에는 닉네임을 key로
         }
-        
-        // 총 경비 계산
-        val totalAmount = expenses.sumOf { it.amount }
-        val participantCount = 2 // TODO: 실제 참여자 수로 변경
-        val amountPerPerson = totalAmount / participantCount
-        
-        // 사용자별 지출 계산 (임시로 현재 사용자만)
-        val userExpenses = mapOf(
-            "나" to expenses.sumOf { it.amount },
-            "상대방" to 0 // TODO: 실제 데이터로 변경
-        )
-        
-        // 정산 데이터 생성
         val settlementItems = calculateSettlementAmounts(userExpenses, amountPerPerson)
-        
-        // UI 업데이트
-        binding.apply {
-            totalAmountText.text = formatCurrency(totalAmount)
-            participantCountText.text = "${participantCount}명"
-            amountPerPersonText.text = formatCurrency(amountPerPerson)
-            
-            emptyStateLayout.visibility = View.GONE
-            settlementContentLayout.visibility = View.VISIBLE
-        }
-        
         settlementAdapter.submitList(settlementItems)
     }
-    
+
     private fun calculateSettlementAmounts(
         userExpenses: Map<String, Int>, 
         amountPerPerson: Int

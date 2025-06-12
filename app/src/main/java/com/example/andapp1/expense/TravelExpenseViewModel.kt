@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -12,6 +13,9 @@ import com.example.andapp1.RoomDatabaseInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.tasks.await
+
 
 /**
  * 여행 경비 ViewModel (Room DB 연동)
@@ -24,9 +28,10 @@ class TravelExpenseViewModel(application: Application) : AndroidViewModel(applic
     
     private val database = RoomDatabaseInstance.getInstance(application)
     private val expenseDao = database.expenseDao()
-    
-    private val _expenses = MutableLiveData<List<ExpenseItem>>()
-    val expenses: LiveData<List<ExpenseItem>> = _expenses
+
+    private val _expenses = MediatorLiveData<List<ExpenseItem>>()
+    val expenses: LiveData<List<ExpenseItem>> get() = _expenses
+    private var expensesSource: LiveData<List<ExpenseItem>>? = null
     
     private val _totalAmount = MutableLiveData<Int>()
     val totalAmount: LiveData<Int> = _totalAmount
@@ -46,16 +51,20 @@ class TravelExpenseViewModel(application: Application) : AndroidViewModel(applic
     
     // Current chatId
     private var currentChatId: String = ""
+
+
     
     /**
      * ChatId 설정
      */
     fun setChatId(chatId: String) {
         currentChatId = chatId
-        loadExpenses(chatId)
+        expensesSource?.let { _expenses.removeSource(it) }
+        val newSource = expenseDao.getExpensesByChatId(chatId)
+        expensesSource = newSource
+        _expenses.addSource(newSource) { list -> _expenses.value = list }
         loadCategoryExpenses(chatId)
     }
-    
     /**
      * 채팅방별 경비 데이터 로드
      */
@@ -140,14 +149,19 @@ class TravelExpenseViewModel(application: Application) : AndroidViewModel(applic
      */
     suspend fun getParticipantCount(chatId: String): Int {
         return try {
-            // TODO: Firebase에서 실제 참여자 수 가져오기
-            2 // 임시로 2명
+            val ref = FirebaseDatabase.getInstance()
+                .getReference("rooms")
+                .child(chatId)
+                .child("participants")
+            val snapshot = ref.get().await()
+            snapshot.childrenCount.toInt()
         } catch (e: Exception) {
-            Log.e(TAG, "참여자 수 로드 실패", e)
-            2
+            // 실패시 최소 1명 반환
+            1
         }
     }
-    
+
+
     /**
      * 카테고리별 경비 합계
      */
@@ -179,6 +193,7 @@ class TravelExpenseViewModel(application: Application) : AndroidViewModel(applic
      */
     fun refreshData(chatId: String) {
         loadExpenses(chatId)
+        loadCategoryExpenses(chatId)
     }
     
     /**
@@ -186,7 +201,6 @@ class TravelExpenseViewModel(application: Application) : AndroidViewModel(applic
      */
     suspend fun addExpense(expense: ExpenseItem) {
         Log.d(TAG, "경비 추가: ${expense.getDisplayDescription()}, 금액: ${expense.amount}원")
-        
         withContext(Dispatchers.IO) {
             try {
                 expenseDao.insertExpense(expense)
@@ -197,7 +211,8 @@ class TravelExpenseViewModel(application: Application) : AndroidViewModel(applic
             }
         }
     }
-    
+
+
     /**
      * 경비 수정
      */
@@ -247,4 +262,4 @@ class TravelExpenseViewModelFactory(private val application: Application) : View
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
-} 
+}
